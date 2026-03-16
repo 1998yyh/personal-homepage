@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import HomePage from './pages/HomePage';
+import { AIReportsPage, StockReportsPage } from './pages/DailyReports';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const queryClient = new QueryClient({
@@ -30,6 +31,26 @@ function App() {
                   <HomePage />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/ai-news"
+              element={
+                <ProtectedRoute>
+                  <AIReportsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/stock-news"
+              element={
+                <ProtectedRoute>
+                  <StockReportsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/daily-reports"
+              element={<Navigate to="/ai-news" replace />}
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

@@ -23,15 +23,15 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     // 如果是 401 错误且不是刷新 token 的请求，尝试刷新 token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
       originalRequest._retry = true;
-      
+
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
-          const { data } = await api.post('/auth/refresh');
+          const { data } = await api.post('/auth/refresh', { refreshToken });
           localStorage.setItem('accessToken', data.accessToken);
           localStorage.setItem('refreshToken', data.refreshToken);
           originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
@@ -44,7 +44,7 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -75,17 +75,17 @@ export interface User {
 }
 
 export const authApi = {
-  register: (data: RegisterData) => 
+  register: (data: RegisterData) =>
     api.post<AuthResponse>('/auth/register', data),
-  
-  login: (data: LoginData) => 
+
+  login: (data: LoginData) =>
     api.post<AuthResponse>('/auth/login', data),
-  
-  getProfile: () => 
+
+  getProfile: () =>
     api.get<User>('/auth/profile'),
-  
-  refresh: () => 
-    api.post<AuthResponse>('/auth/refresh'),
+
+  refresh: (refreshToken: string) =>
+    api.post<AuthResponse>('/auth/refresh', { refreshToken }),
 };
 
 export default api;

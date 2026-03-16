@@ -16,16 +16,45 @@ export default function HomePage() {
 
       {/* 导航栏 */}
       <nav className="relative z-10 glass-dark border-b border-white/5">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            {/* Logo */}
+            <a href="/" className="flex items-center gap-3 group">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20 group-hover:shadow-primary-500/40 transition-shadow">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <span className="text-xl font-display font-bold text-white">Web Tools</span>
+            </a>
+            
+            {/* 日报入口 - 精致胶囊式设计 */}
+            <div className="flex items-center gap-1 bg-white/5 rounded-full p-1">
+              <a
+                href="/ai-news"
+                className="group flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 hover:bg-gradient-to-r hover:from-indigo-500/20 hover:to-purple-500/20"
+              >
+                <span className="text-lg group-hover:scale-110 transition-transform">🤖</span>
+                <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
+                  AI资讯
+                </span>
+              </a>
+              
+              <div className="w-px h-4 bg-white/10"></div>
+              
+              <a
+                href="/stock-news"
+                className="group flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 hover:bg-gradient-to-r hover:from-emerald-500/20 hover:to-green-500/20"
+              >
+                <span className="text-lg group-hover:scale-110 transition-transform">📈</span>
+                <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
+                  股票资讯
+                </span>
+              </a>
             </div>
-            <span className="text-xl font-display font-bold text-white">Web Tools</span>
           </div>
 
+          {/* 用户信息 */}
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-sm text-dark-200">{user?.username}</p>
@@ -53,35 +82,53 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* 信息卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-dark rounded-2xl p-6">
-            <div className="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+        {/* 功能卡片 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* AI资讯卡片 */}
+          <a
+            href="/ai-news"
+            className="group glass-dark rounded-2xl p-6 border border-transparent hover:border-indigo-500/30 transition-all duration-300 relative overflow-hidden"
+          >
+            {/* 悬浮光效 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500"></div>
+            
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-3xl">🤖</span>
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                AI情报早报
+                <svg className="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </h3>
+              <p className="text-dark-400 text-sm">AI / Agent / Claude Code 每日精选</p>
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">账户信息</h3>
-            <p className="text-dark-400 text-sm">邮箱：{user?.email}</p>
-            <p className="text-dark-400 text-sm mt-1">用户名：{user?.username}</p>
-          </div>
+          </a>
 
-          <div className="glass-dark rounded-2xl p-6">
-            <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          {/* 股票资讯卡片 */}
+          <a
+            href="/stock-news"
+            className="group glass-dark rounded-2xl p-6 border border-transparent hover:border-emerald-500/30 transition-all duration-300 relative overflow-hidden"
+          >
+            {/* 悬浮光效 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-green-500/0 group-hover:from-emerald-500/5 group-hover:to-green-500/5 transition-all duration-500"></div>
+            
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-3xl">📈</span>
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                股票资讯日报
+                <svg className="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </h3>
+              <p className="text-dark-400 text-sm">A股 / 港股 每日市场精选</p>
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">注册时间</h3>
-            <p className="text-dark-400 text-sm">
-              {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('zh-CN', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              }) : '-'}
-            </p>
-          </div>
+          </a>
 
+          {/* 安全状态卡片 */}
           <div className="glass-dark rounded-2xl p-6">
             <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4">
               <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,8 +136,11 @@ export default function HomePage() {
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">安全状态</h3>
-            <p className="text-green-400 text-sm flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-400"></span>
+            <p className="text-green-400 text-sm flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
               账户安全
             </p>
           </div>
