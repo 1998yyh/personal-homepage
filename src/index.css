@@ -149,6 +149,71 @@
   }
 }
 
+/* Markdown content in dark theme */
+.markdown-content {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.markdown-content a {
+  color: rgb(129, 140, 248) !important;
+}
+
+.markdown-content a:hover {
+  color: rgb(165, 180, 252) !important;
+}
+
+.markdown-content strong {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.markdown-content em {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.markdown-content p {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.markdown-content li {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.markdown-content code {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.markdown-content blockquote {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Markdown tables in dark theme */
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdown-content th {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.markdown-content td {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.markdown-content tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

@@ -4,6 +4,7 @@ import dailyReportsApi from '../../lib/daily-report-api';
 import type { DailyReportType, DailyReport } from '../../types/daily-report';
 import ReportList from './components/ReportList';
 import ReportContent from './components/ReportContent';
+import Navbar from '../../components/Navbar';
 
 export default function DailyReportsPage() {
   const [selectedType, setSelectedType] = useState<DailyReportType>('ai');
@@ -36,29 +37,7 @@ export default function DailyReportsPage() {
       <div className="orb orb-3"></div>
 
       {/* 导航栏 */}
-      <nav className="relative z-10 glass-dark border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="text-xl font-display font-bold text-white">Web Tools</span>
-            </a>
-            <div className="h-6 w-px bg-white/10"></div>
-            <span className="text-white/80 font-medium">📰 日报</span>
-          </div>
-
-          <a
-            href="/"
-            className="px-4 py-2 rounded-lg glass text-white/80 hover:text-white hover:bg-white/10 transition-all"
-          >
-            返回首页
-          </a>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* 主内容 - 左右布局 */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 py-6">

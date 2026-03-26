@@ -47,7 +47,7 @@ export default function ReportContent({ report, isLoading, theme = 'ai' }: Repor
   }
 
   return (
-    <div className="h-full overflow-y-auto p-8">
+    <div className="h-full overflow-y-auto p-8 markdown-content">
       {/* 标题 */}
       <div className="mb-8">
         <h1 className="text-xl font-semibold text-white mb-2">{report.title}</h1>
@@ -87,9 +87,12 @@ export default function ReportContent({ report, isLoading, theme = 'ai' }: Repor
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${colors.text} hover:opacity-80 underline underline-offset-2`}
+                className={`${colors.text} hover:opacity-80 underline underline-offset-2 inline-flex items-center gap-1`}
               >
-                {children}
+                <span className="text-inherit">{children}</span>
+                <svg className="w-3 h-3 opacity-60 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
               </a>
             ),
 
@@ -143,6 +146,28 @@ export default function ReportContent({ report, isLoading, theme = 'ai' }: Repor
             ),
             em: ({ children }) => (
               <em className="text-white/90">{children}</em>
+            ),
+
+            // 表格
+            table: ({ children }) => (
+              <div className="overflow-x-auto mb-6 rounded-xl border border-white/[0.06]">
+                <table className="w-full text-sm">{children}</table>
+              </div>
+            ),
+            thead: ({ children }) => (
+              <thead className="bg-white/[0.05]">{children}</thead>
+            ),
+            tbody: ({ children }) => (
+              <tbody className="divide-y divide-white/[0.06]">{children}</tbody>
+            ),
+            tr: ({ children }) => (
+              <tr className="hover:bg-white/[0.03] transition-colors">{children}</tr>
+            ),
+            th: ({ children }) => (
+              <th className="px-4 py-3 text-left text-white/90 font-medium whitespace-nowrap">{children}</th>
+            ),
+            td: ({ children }) => (
+              <td className="px-4 py-3 text-white/70">{children}</td>
             ),
           }}
         >

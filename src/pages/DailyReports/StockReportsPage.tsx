@@ -4,6 +4,7 @@ import dailyReportsApi from '../../lib/daily-report-api';
 import type { DailyReport } from '../../types/daily-report';
 import ReportList from './components/ReportList';
 import ReportContent from './components/ReportContent';
+import Navbar from '../../components/Navbar';
 
 interface StockReportsPageProps {
   initialReport?: DailyReport | null;
@@ -33,35 +34,7 @@ export default function StockReportsPage({ initialReport }: StockReportsPageProp
       <div className="orb orb-3" style={{ background: 'radial-gradient(circle, rgba(34, 197, 94, 0.08) 0%, transparent 70%)' }}></div>
 
       {/* 导航栏 */}
-      <nav className="relative z-10 glass-dark border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-white">Web Tools</span>
-            </a>
-            
-            {/* 模块切换标签 */}
-            <div className="flex items-center bg-white/5 rounded-full p-1 ml-4">
-              <a
-                href="/ai-news"
-                className="px-4 py-1.5 rounded-full text-sm font-medium text-white/60 hover:text-white transition-colors"
-              >
-                🤖 AI资讯
-              </a>
-              <span
-                className="px-4 py-1.5 rounded-full text-sm font-medium bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg cursor-default"
-              >
-                📈 股票资讯
-              </span>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* 主内容 */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 py-4">

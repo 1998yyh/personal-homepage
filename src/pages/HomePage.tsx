@@ -32,9 +32,9 @@ export default function HomePage() {
             <div className="flex items-center gap-1 bg-white/5 rounded-full p-1">
               <a
                 href="/ai-news"
-                className="group flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 hover:bg-gradient-to-r hover:from-indigo-500/20 hover:to-purple-500/20"
+                className="group flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-300 hover:bg-gradient-to-r hover:from-indigo-500/20 hover:to-purple-500/20"
               >
-                <span className="text-lg group-hover:scale-110 transition-transform">🤖</span>
+                <span className="text-base group-hover:scale-110 transition-transform">🤖</span>
                 <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
                   AI资讯
                 </span>
@@ -44,11 +44,35 @@ export default function HomePage() {
               
               <a
                 href="/stock-news"
-                className="group flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 hover:bg-gradient-to-r hover:from-emerald-500/20 hover:to-green-500/20"
+                className="group flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-300 hover:bg-gradient-to-r hover:from-emerald-500/20 hover:to-green-500/20"
               >
-                <span className="text-lg group-hover:scale-110 transition-transform">📈</span>
+                <span className="text-base group-hover:scale-110 transition-transform">📈</span>
                 <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
                   股票资讯
+                </span>
+              </a>
+
+              <div className="w-px h-4 bg-white/10"></div>
+              
+              <a
+                href="/dev-tools"
+                className="group flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-300 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20"
+              >
+                <span className="text-base group-hover:scale-110 transition-transform">⚙️</span>
+                <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
+                  开发工具
+                </span>
+              </a>
+
+              <div className="w-px h-4 bg-white/10"></div>
+              
+              <a
+                href="/novels"
+                className="group flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-300 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20"
+              >
+                <span className="text-base group-hover:scale-110 transition-transform">📚</span>
+                <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
+                  小说
                 </span>
               </a>
             </div>
@@ -129,20 +153,51 @@ export default function HomePage() {
           </a>
 
           {/* 安全状态卡片 */}
-          <div className="glass-dark rounded-2xl p-6">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
+          <a
+            href="/dev-tools"
+            className="group glass-dark rounded-2xl p-6 border border-transparent hover:border-cyan-500/30 transition-all duration-300 relative overflow-hidden"
+          >
+            {/* 悬浮光效 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/0 to-blue-500/0 group-hover:from-cyan-500/5 group-hover:to-blue-500/5 transition-all duration-500"></div>
+            
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-3xl">⚙️</span>
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                开发工具箱
+                <svg className="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </h3>
+              <p className="text-dark-400 text-sm">编码解码 / 格式化 / 转换工具</p>
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">安全状态</h3>
-            <p className="text-green-400 text-sm flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-              </span>
-              账户安全
-            </p>
+          </a>
+        </div>
+
+        {/* 快捷工具 */}
+        <div className="glass-dark rounded-2xl p-6">
+          <h3 className="text-white/60 text-sm mb-4">常用工具</h3>
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+            {[
+              { icon: '🔤', name: 'Base64', href: '/dev-tools' },
+              { icon: '🔗', name: 'URL', href: '/dev-tools' },
+              { icon: '📋', name: 'JSON', href: '/dev-tools' },
+              { icon: '⏰', name: '时间戳', href: '/dev-tools' },
+              { icon: '🎨', name: '颜色', href: '/dev-tools' },
+              { icon: '🔑', name: 'UUID', href: '/dev-tools' },
+              { icon: '🔐', name: '密码', href: '/dev-tools' },
+              { icon: '✔️', name: 'Hash', href: '/dev-tools' },
+            ].map((tool) => (
+              <a
+                key={tool.name}
+                href={tool.href}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-white/5 transition-colors group"
+              >
+                <span className="text-2xl group-hover:scale-110 transition-transform">{tool.icon}</span>
+                <span className="text-white/50 text-xs group-hover:text-white/80 transition-colors">{tool.name}</span>
+              </a>
+            ))}
           </div>
         </div>
       </main>
