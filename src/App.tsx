@@ -6,9 +6,6 @@ import RegisterPage from './pages/RegisterPage';
 import HomePage from './pages/HomePage';
 import { AIReportsPage, StockReportsPage } from './pages/DailyReports';
 import { DevToolsPage } from './pages/DevTools';
-import NovelsPage from './pages/NovelsPage';
-import NovelDetailPage from './pages/NovelDetailPage';
-import ChapterPage from './pages/ChapterPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const queryClient = new QueryClient({
@@ -57,30 +54,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DevToolsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/novels"
-              element={
-                <ProtectedRoute>
-                  <NovelsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/novels/:id"
-              element={
-                <ProtectedRoute>
-                  <NovelDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/novels/:id/chapters/:chapterId"
-              element={
-                <ProtectedRoute>
-                  <ChapterPage />
                 </ProtectedRoute>
               }
             />

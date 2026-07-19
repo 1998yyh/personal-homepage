@@ -63,18 +63,6 @@ export default function HomePage() {
                   开发工具
                 </span>
               </a>
-
-              <div className="w-px h-4 bg-white/10"></div>
-              
-              <a
-                href="/novels"
-                className="group flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-300 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20"
-              >
-                <span className="text-base group-hover:scale-110 transition-transform">📚</span>
-                <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
-                  小说
-                </span>
-              </a>
             </div>
           </div>
 
