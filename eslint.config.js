@@ -18,5 +18,9 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { parser: tseslint.parser },
     },
+    rules: {
+      // Navbar 等单词组件名与 React 原版命名保持一致，允许单词组件名
+      'vue/multi-word-component-names': ['error', { ignores: ['Navbar'] }],
+    },
   },
 ])
