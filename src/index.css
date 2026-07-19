@@ -214,6 +214,26 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.markdown-content h1 { font-size: 1.125rem; font-weight: 600; color: #fff; margin-bottom: 1.5rem; }
+.markdown-content h2 { font-size: 1rem; font-weight: 500; color: #fff; margin: 1.5rem 0 1rem; }
+.markdown-content h3 { font-size: 0.875rem; font-weight: 500; color: #fff; margin: 1rem 0 0.75rem; }
+.markdown-content p { line-height: 1.625; font-size: 0.875rem; margin-bottom: 1rem; }
+.markdown-content ul, .markdown-content ol { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; list-style: none; padding: 0; }
+.markdown-content li { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 0.75rem; padding: 1rem; font-size: 0.875rem; }
+.markdown-content li:hover { background: rgba(255,255,255,0.05); }
+.markdown-content li p { margin-bottom: 0; }
+.markdown-content hr { border-color: rgba(255,255,255,0.1); margin: 1.5rem 0; }
+.markdown-content pre { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 0.75rem; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; }
+.markdown-content pre code { font-size: 0.75rem; }
+.markdown-content :not(pre) > code { background: rgba(255,255,255,0.1); padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.75rem; }
+.markdown-content blockquote { border-left: 2px solid rgba(129,140,248,0.2); padding: 0.5rem 0 0.5rem 1rem; margin: 1rem 0; background: rgba(255,255,255,0.02); border-radius: 0 0.5rem 0.5rem 0; }
+.markdown-content table th, .markdown-content table td { padding: 0.75rem 1rem; text-align: left; }
+.markdown-content table { border-radius: 0.75rem; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); font-size: 0.875rem; }
+/* 主题色：默认 ai（indigo），.theme-stock 切换为 emerald */
+.markdown-content.theme-stock a { color: rgb(52, 211, 153) !important; }
+.markdown-content.theme-stock a:hover { color: rgb(110, 231, 183) !important; }
+.markdown-content.theme-stock blockquote { border-left-color: rgba(16,185,129,0.2); }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
