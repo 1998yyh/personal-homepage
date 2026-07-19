@@ -37,7 +37,7 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
           return api(originalRequest);
         }
-      } catch (refreshError) {
+      } catch {
         // 刷新失败，清除 token 并跳转到登录页
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
