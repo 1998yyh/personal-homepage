@@ -35,15 +35,15 @@ watch(
     <div
       class="orb orb-1"
       :style="{ background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)' }"
-    ></div>
+    />
     <div
       class="orb orb-2"
       :style="{ background: 'radial-gradient(circle, rgba(5, 150, 105, 0.1) 0%, transparent 70%)' }"
-    ></div>
+    />
     <div
       class="orb orb-3"
       :style="{ background: 'radial-gradient(circle, rgba(34, 197, 94, 0.08) 0%, transparent 70%)' }"
-    ></div>
+    />
 
     <!-- 导航栏 -->
     <Navbar />
@@ -54,7 +54,9 @@ watch(
         <!-- 左侧：日报列表 -->
         <div class="w-56 flex-shrink-0 glass-dark rounded-xl overflow-hidden">
           <div class="px-4 py-3 border-b border-white/[0.06]">
-            <h3 class="text-white/50 text-xs font-medium uppercase tracking-wider">历史日报</h3>
+            <h3 class="text-white/50 text-xs font-medium uppercase tracking-wider">
+              历史日报
+            </h3>
           </div>
           <div class="p-2 h-[calc(100%-48px)]">
             <ReportList
@@ -68,7 +70,11 @@ watch(
 
         <!-- 右侧：日报内容 -->
         <div class="flex-1 glass-dark rounded-xl overflow-hidden">
-          <ReportContent :report="selectedReport" :is-loading="isLoading" theme="stock" />
+          <ReportContent
+            :report="selectedReport"
+            :is-loading="isLoading"
+            theme="stock"
+          />
         </div>
       </div>
     </main>

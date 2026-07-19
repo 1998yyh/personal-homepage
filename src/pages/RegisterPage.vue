@@ -60,9 +60,9 @@ const handleSubmit = async () => {
 <template>
   <div class="min-h-screen bg-mesh flex items-center justify-center p-4 relative overflow-hidden">
     <!-- 背景装饰 -->
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
+    <div class="orb orb-1" />
+    <div class="orb orb-2" />
+    <div class="orb orb-3" />
 
     <!-- 注册卡片 -->
     <div class="w-full max-w-md relative z-10">
@@ -70,16 +70,33 @@ const handleSubmit = async () => {
         <!-- Logo & 标题 -->
         <div class="text-center mb-8">
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-primary-600 mb-4 shadow-lg shadow-cyan-500/30">
-            <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            <svg
+              class="w-8 h-8 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+              />
             </svg>
           </div>
-          <h1 class="text-3xl font-display font-bold text-white mb-2">创建账户</h1>
-          <p class="text-dark-300">开始你的探索之旅</p>
+          <h1 class="text-3xl font-display font-bold text-white mb-2">
+            创建账户
+          </h1>
+          <p class="text-dark-300">
+            开始你的探索之旅
+          </p>
         </div>
 
         <!-- 表单 -->
-        <form class="space-y-4" @submit.prevent="handleSubmit">
+        <form
+          class="space-y-4"
+          @submit.prevent="handleSubmit"
+        >
           <div>
             <label class="block text-sm font-medium text-dark-200 mb-2">
               邮箱
@@ -90,7 +107,7 @@ const handleSubmit = async () => {
               class="input-glass"
               placeholder="your@email.com"
               required
-            />
+            >
           </div>
 
           <div>
@@ -103,7 +120,7 @@ const handleSubmit = async () => {
               class="input-glass"
               placeholder="3-20个字符，字母数字下划线"
               required
-            />
+            >
           </div>
 
           <div>
@@ -116,7 +133,7 @@ const handleSubmit = async () => {
               class="input-glass"
               placeholder="至少6个字符"
               required
-            />
+            >
           </div>
 
           <div>
@@ -129,12 +146,23 @@ const handleSubmit = async () => {
               class="input-glass"
               placeholder="再次输入密码"
               required
-            />
+            >
           </div>
 
-          <div v-if="error" class="error-message">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          <div
+            v-if="error"
+            class="error-message"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"
+              />
             </svg>
             {{ error }}
           </div>
@@ -145,21 +173,38 @@ const handleSubmit = async () => {
             class="btn-primary flex items-center justify-center gap-2 mt-6"
           >
             <template v-if="isLoading">
-              <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              <svg
+                class="animate-spin h-5 w-5"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  fill="none"
+                />
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
               </svg>
               注册中...
             </template>
-            <template v-else>创建账户</template>
+            <template v-else>
+              创建账户
+            </template>
           </button>
         </form>
 
         <!-- 分割线 -->
         <div class="flex items-center gap-4 my-6">
-          <div class="flex-1 h-px bg-white/10"></div>
+          <div class="flex-1 h-px bg-white/10" />
           <span class="text-dark-400 text-sm">或</span>
-          <div class="flex-1 h-px bg-white/10"></div>
+          <div class="flex-1 h-px bg-white/10" />
         </div>
 
         <!-- 登录链接 -->

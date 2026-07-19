@@ -26,10 +26,23 @@ const handleLogout = () => {
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-8">
         <!-- Logo -->
-        <router-link to="/" class="flex items-center gap-3 group">
+        <router-link
+          to="/"
+          class="flex items-center gap-3 group"
+        >
           <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20 group-hover:shadow-primary-500/40 transition-shadow">
-            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <svg
+              class="w-5 h-5 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
             </svg>
           </div>
           <span class="text-xl font-display font-bold text-white">Web Tools</span>
@@ -55,7 +68,10 @@ const handleLogout = () => {
       </div>
 
       <!-- 用户信息 -->
-      <div v-if="auth.isAuthenticated" class="flex items-center gap-4">
+      <div
+        v-if="auth.isAuthenticated"
+        class="flex items-center gap-4"
+      >
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
             <span class="text-white text-sm font-medium">

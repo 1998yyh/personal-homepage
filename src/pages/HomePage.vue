@@ -19,9 +19,9 @@ const quickTools = [
 <template>
   <div class="min-h-screen bg-mesh relative overflow-hidden">
     <!-- 背景装饰 -->
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
+    <div class="orb orb-1" />
+    <div class="orb orb-2" />
+    <div class="orb orb-3" />
 
     <!-- 导航栏 -->
     <Navbar />
@@ -46,7 +46,7 @@ const quickTools = [
           class="group glass-dark rounded-2xl p-6 border border-transparent hover:border-indigo-500/30 transition-all duration-300 relative overflow-hidden"
         >
           <!-- 悬浮光效 -->
-          <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500"></div>
+          <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500" />
 
           <div class="relative">
             <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -54,11 +54,23 @@ const quickTools = [
             </div>
             <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
               AI情报早报
-              <svg class="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <svg
+                class="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </h3>
-            <p class="text-dark-400 text-sm">AI / Agent / Claude Code 每日精选</p>
+            <p class="text-dark-400 text-sm">
+              AI / Agent / Claude Code 每日精选
+            </p>
           </div>
         </router-link>
 
@@ -68,7 +80,7 @@ const quickTools = [
           class="group glass-dark rounded-2xl p-6 border border-transparent hover:border-emerald-500/30 transition-all duration-300 relative overflow-hidden"
         >
           <!-- 悬浮光效 -->
-          <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-green-500/0 group-hover:from-emerald-500/5 group-hover:to-green-500/5 transition-all duration-500"></div>
+          <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-green-500/0 group-hover:from-emerald-500/5 group-hover:to-green-500/5 transition-all duration-500" />
 
           <div class="relative">
             <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -76,11 +88,23 @@ const quickTools = [
             </div>
             <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
               股票资讯日报
-              <svg class="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <svg
+                class="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </h3>
-            <p class="text-dark-400 text-sm">A股 / 港股 每日市场精选</p>
+            <p class="text-dark-400 text-sm">
+              A股 / 港股 每日市场精选
+            </p>
           </div>
         </router-link>
 
@@ -90,7 +114,7 @@ const quickTools = [
           class="group glass-dark rounded-2xl p-6 border border-transparent hover:border-cyan-500/30 transition-all duration-300 relative overflow-hidden"
         >
           <!-- 悬浮光效 -->
-          <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/0 to-blue-500/0 group-hover:from-cyan-500/5 group-hover:to-blue-500/5 transition-all duration-500"></div>
+          <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/0 to-blue-500/0 group-hover:from-cyan-500/5 group-hover:to-blue-500/5 transition-all duration-500" />
 
           <div class="relative">
             <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -98,18 +122,32 @@ const quickTools = [
             </div>
             <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
               开发工具箱
-              <svg class="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <svg
+                class="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </h3>
-            <p class="text-dark-400 text-sm">编码解码 / 格式化 / 转换工具</p>
+            <p class="text-dark-400 text-sm">
+              编码解码 / 格式化 / 转换工具
+            </p>
           </div>
         </router-link>
       </div>
 
       <!-- 快捷工具 -->
       <div class="glass-dark rounded-2xl p-6">
-        <h3 class="text-white/60 text-sm mb-4">常用工具</h3>
+        <h3 class="text-white/60 text-sm mb-4">
+          常用工具
+        </h3>
         <div class="grid grid-cols-4 md:grid-cols-8 gap-3">
           <router-link
             v-for="tool in quickTools"

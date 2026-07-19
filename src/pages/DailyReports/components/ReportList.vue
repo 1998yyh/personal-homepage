@@ -23,18 +23,35 @@ function formatDate(dateStr: string) {
 
 <template>
   <!-- 加载态 -->
-  <div v-if="isLoading" class="space-y-1">
-    <div v-for="i in 5" :key="i" class="h-14 rounded-lg bg-white/5 animate-pulse"></div>
+  <div
+    v-if="isLoading"
+    class="space-y-1"
+  >
+    <div
+      v-for="i in 5"
+      :key="i"
+      class="h-14 rounded-lg bg-white/5 animate-pulse"
+    />
   </div>
 
   <!-- 空态 -->
-  <div v-else-if="reports.length === 0" class="text-center py-12">
-    <div class="text-4xl mb-3">📭</div>
-    <p class="text-white/40 text-sm">暂无日报</p>
+  <div
+    v-else-if="reports.length === 0"
+    class="text-center py-12"
+  >
+    <div class="text-4xl mb-3">
+      📭
+    </div>
+    <p class="text-white/40 text-sm">
+      暂无日报
+    </p>
   </div>
 
   <!-- 列表 -->
-  <div v-else class="space-y-1 overflow-y-auto h-full pr-1">
+  <div
+    v-else
+    class="space-y-1 overflow-y-auto h-full pr-1"
+  >
     <button
       v-for="report in reports"
       :key="report.id"
