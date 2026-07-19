@@ -73,7 +73,7 @@ src/
 - **Login/Register**：表单逻辑、错误提示照搬；`.input-glass` / `.btn-primary` 样式零改动；登录成功后跳回 `redirect` query 指向的页面。
 - **HomePage**：顺手修复——移除内联导航栏改用共享 `<Navbar>`；内部跳转全部 `<router-link>`。
 - **DailyReports（AI/Stock）**：`useQuery` 换 vue-query 写法；markdown 正文由 markdown-it 渲染 + `v-html`，容器保留 `.markdown-content` class。
-- **DevTools**：12 个纯前端小工具（Base64 / URL / HTML 实体 / Unicode / JSON / 时间戳 / 颜色 / 进制 / UUID / 密码 / Hash 等）按 SFC 逐个迁移，无后端依赖。
+- **DevTools**：12 个纯前端小工具（Base64 / URL / HTML 实体 / Unicode / JSON / 时间戳 / 颜色 / 进制 / UUID / 密码 / Hash 等）各拆为独立 SFC（`pages/DevTools/tools/*.vue`），由 `DevToolsPage.vue` 按选中项动态渲染——替代现版全部塞在单个 `.tsx` 的写法，无后端依赖。
 
 ### ④ 已知问题修复清单（仅限这两项）
 
