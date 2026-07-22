@@ -50,14 +50,15 @@ src/
 登录页提交 → authApi.login() 得 token → auth store login() 存 localStorage 并 fetchProfile()
   → 之后每个请求：api.ts 请求拦截器自动附加 Authorization: Bearer <accessToken>
   → 401 时：响应拦截器用 refreshToken 调 /auth/refresh，换新 token 后重放原请求一次
-  → 刷新失败：清空 localStorage，window.location.href = '/login'
-路由层：router/index.ts 的 beforeEach 全局守卫 —— meta.public 放行；
-  首次导航（store.isLoading）先 fetchProfile；未认证跳 /login?redirect=<fullPath>
+  → 刷新失败：清空 localStorage + store 静默登出（全站公开，不跳登录页）
+路由层：router/index.ts 的 beforeEach 全局守卫 —— 首次导航（store.isLoading）
+  先 fetchProfile 恢复登录态；**不强制登录**（2026-07-22 起全站公开，登录仅用于展示用户信息）
 ```
 
 关键事实：
 - Token 存 localStorage：`accessToken`（约 2h）、`refreshToken`（约 7d）。**只有 `api.ts` 的响应拦截器实现了 401 自动刷新**，绕过它新建 axios 实例会丢失该能力。
 - ⚠️ **守卫只在导航时触发**。`logout()` 只清状态不跳转——所有退出入口必须 `auth.logout()` 后显式 `router.push('/login')`（参照 `src/components/Navbar.vue` 的 `handleLogout`）。
+- 页面均为匿名可访问；未登录时 Navbar 显示「登录」入口，登录后显示用户头像与「退出」。
 - vue-query 全局配置 `retry: false`、`refetchOnWindowFocus: false`（`src/main.ts`）。
 - `/daily-reports` 重定向到 `/ai-news`；通配路由兜底回 `/`。
 
@@ -67,7 +68,7 @@ src/
 
 - **SFC 一律 `<script setup lang="ts">`**；类型导入必须 `import type`（`verbatimModuleSyntax` 开启，混用会编译失败）。
 - **API 层模式**：`src/lib/` 一个资源一个模块，首行 `import api from './api'`，方法内 `const { data } = await api.get<T>(...)` 后直接返回 `data`（参照 `daily-report-api.ts`）。类型放 `src/types/`。
-- **新增页面**：在 `src/router/index.ts` 注册路由（公开页加 `meta: { public: true }`，其余自动受守卫保护）；在 `src/components/Navbar.vue` 的 `navItems` 数组加导航项（含 `activePattern` 正则）；带 Navbar 的页面用 `min-h-screen bg-mesh` + `orb orb-1/2/3` 背景装饰。
+- **新增页面**：在 `src/router/index.ts` 注册路由（所有页面公开访问，无需 meta 标记）；在 `src/components/Navbar.vue` 的 `navItems` 数组加导航项（含 `activePattern` 正则）；带 Navbar 的页面根元素用 `min-h-screen` 即可（背景色在 body 上，无需装饰元素）。
 - **服务端状态**用 vue-query（`useQuery`），**跨组件状态**用 Pinia store，组件本地状态用 `ref`；不引入其他状态库。
 - **数据到达后的派生选中**用 `watch(source, cb, { immediate: true })`——必须带 `immediate`，否则 vue-query 缓存命中（setup 时 data 已同步填充）且 structural sharing 保留引用时 watch 不触发（参照 `AIReportsPage.vue`）。
 - **markdown 渲染**：一律走 `src/lib/markdown.ts` 的 `renderMarkdown()`（markdown-it，`html: false` 防注入，链接自动 `target=_blank`），用 `v-html` 输出到带 `.markdown-content`（+ `theme-ai`/`theme-stock`）class 的容器；标签样式由 `index.css` 的 `.markdown-content` 后代选择器承担，不要在组件里给渲染内容加 class。
@@ -75,9 +76,14 @@ src/
 
 ## 样式规范
 
-- **Tailwind v4**，主题 token（`primary-*`/`dark-*` 颜色、`font-display`/`font-body`、`animate-float`）的唯一权威来源是 `src/index.css` 的 `@theme` 块（旧的 `tailwind.config.js` 已删除，不要再建）。
-- 复用 `index.css` 已定义的组件类：`.glass` / `.glass-dark` / `.input-glass` / `.btn-primary` / `.error-message` / `.bg-mesh` / `.orb*`，不要重写相同样式。
-- 设计语言：暗色玻璃拟态（backdrop-blur 卡片 + 渐变背景），新 UI 保持该风格。
+设计语言来自 Open Design 设计稿（human-approachable / 钴蓝 accent，亮主题为默认 + 暗色切换），2026-07 已替换原暗色玻璃拟态：
+
+- **设计令牌**的唯一权威来源是 `src/index.css` 顶部的 `:root` 与 `[data-theme="dark"]` 块（oklch 值与设计稿 `site.css` 一致）：`--bg/--surface/--fg/--muted/--border/--accent(--soft/--strong)/--success/--warn/--danger/--domain/--shadow-card/--shadow-lift/--radius`。
+- 这些令牌经 `@theme inline` 映射为 Tailwind 工具类（`bg-bg` / `bg-surface` / `text-fg` / `text-muted` / `border-border` / `bg-accent` / `text-accent-strong` / `shadow-card` / `shadow-lift` 等），**亮暗主题随 `<html data-theme>` 自动切换，不要用 `dark:` 变体，也不要在组件里写死 `text-white`、`bg-white/5` 这类暗色假设**。
+- **主题切换**：`index.html` 内联脚本初始化（localStorage 键 `zhe-theme`，缺省跟随系统），切换按钮在 `Navbar.vue`。
+- 复用 `index.css` 已定义的组件类：`.od-card` / `.od-panel` / `.od-btn`（`-primary`/`-ghost`/`-soft`）/ `.od-input` / `.od-label` / `.od-error` / `.od-chip` / `.od-item`（`.active`）/ `.od-nav-link` / `.od-icon-btn` / `.eyebrow` / `.ticker`，不要重写相同样式。
+- **图标一律用 `src/components/AppIcon.vue`**（Lucide 风格 SVG），禁止 emoji 充当图标；新工具/板块在组件内的 `icons` 映射中补充。
+- **遗留例外**：登录/注册页仍是旧的暗色玻璃拟态（`.glass` / `.glass-dark` / `.input-glass` / `.btn-primary` / `.error-message` / `.bg-mesh` / `.orb*` 为其保留，其他页面不得再使用），待后续按设计稿 `login.html` 重做后删除。
 
 ## 三层边界模型
 
@@ -105,8 +111,8 @@ src/
 无测试框架。变更的验收标准：
 1. `pnpm build` 通过（vue-tsc 严格类型检查，`noUnusedLocals`/`noUnusedParameters` 开启）。
 2. `pnpm lint` 无新增错误（当前基线 0/0，保持）。
-3. 涉及鉴权/路由的改动，浏览器手动验证：未登录访问受保护路由 → 跳 `/login`；登录 → 回 `redirect` 来源页；退出 → 回 `/login` 且 localStorage 双 token 清空；token 过期 → 自动刷新无感继续（Network 面板可见 `/auth/refresh`）。
+3. 涉及鉴权/路由的改动，浏览器手动验证：匿名可直接访问所有页面且 Navbar 显示「登录」；登录 → 回 `redirect` 来源页；退出 → 回 `/login` 且 localStorage 双 token 清空；token 过期 → 自动刷新无感继续（Network 面板可见 `/auth/refresh`）；刷新失败 → 静默登出留在当前页（Navbar 变回「登录」）。
 
 ---
-**版本**: v3.0（Vue 3 迁移完成后 deepinit 全量重写）
-**最后更新**: 2026-07-20
+**版本**: v3.1（按 Open Design 设计稿全站换肤：亮/暗双主题设计令牌，登录/注册页暂保留旧风格）
+**最后更新**: 2026-07-22
