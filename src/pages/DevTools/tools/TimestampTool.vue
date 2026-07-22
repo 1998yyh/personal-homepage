@@ -54,7 +54,7 @@ const setNow = () => {
   <div class="space-y-6">
     <div class="flex gap-4">
       <button
-        class="px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 transition-colors"
+        class="od-btn od-btn-primary"
         @click="setNow"
       >
         获取当前时间戳
@@ -63,16 +63,16 @@ const setNow = () => {
 
     <div class="grid grid-cols-2 gap-6">
       <div>
-        <label class="block text-white/60 text-sm mb-2">时间戳 → 日期</label>
+        <label class="od-label">时间戳 → 日期</label>
         <div class="flex gap-2">
           <input
             v-model="timestamp"
             type="text"
             placeholder="输入时间戳..."
-            class="flex-1 px-3 py-2 bg-white/5 rounded-lg text-white border border-white/10 focus:border-white/20 focus:outline-none"
+            class="od-input flex-1 font-mono"
           >
           <button
-            class="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
+            class="od-btn od-btn-soft shrink-0"
             @click="timestampToDate"
           >
             转换
@@ -81,15 +81,15 @@ const setNow = () => {
       </div>
 
       <div>
-        <label class="block text-white/60 text-sm mb-2">日期 → 时间戳</label>
+        <label class="od-label">日期 → 时间戳</label>
         <div class="flex gap-2">
           <input
             v-model="dateStr"
             type="datetime-local"
-            class="flex-1 px-3 py-2 bg-white/5 rounded-lg text-white border border-white/10 focus:border-white/20 focus:outline-none"
+            class="od-input flex-1"
           >
           <button
-            class="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
+            class="od-btn od-btn-soft shrink-0"
             @click="dateToTimestamp"
           >
             转换
@@ -100,13 +100,13 @@ const setNow = () => {
 
     <div
       v-if="results.length > 0"
-      class="bg-white/5 rounded-lg p-4"
+      class="od-panel p-4"
     >
       <div
         v-for="(line, i) in results"
         :key="i"
         class="text-sm font-mono"
-        :class="line.startsWith('---') ? 'text-white/20 my-2' : 'text-white/80'"
+        :class="line.startsWith('---') ? 'text-muted/50 my-2' : 'text-fg/85'"
       >
         {{ line }}
       </div>

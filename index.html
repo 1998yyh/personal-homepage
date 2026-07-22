@@ -4,10 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Web Tools - 现代化的后台管理系统" />
+    <meta name="description" content="Web Tools - 个人主页：AI/股票日报与前端开发工具" />
     <title>Web Tools</title>
+    <script>
+      // 主题初始化（与设计稿一致）：localStorage 优先，缺省跟随系统；避免加载后闪变
+      ;(function () {
+        var t = null
+        try { t = localStorage.getItem('zhe-theme') } catch (e) { /* 隐私模式忽略 */ }
+        if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.dataset.theme = t
+      })()
+    </script>
   </head>
-  <body class="bg-dark-950">
+  <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

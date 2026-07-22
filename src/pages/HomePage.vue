@@ -1,165 +1,147 @@
 <script setup lang="ts">
 import Navbar from '../components/Navbar.vue'
+import AppIcon from '../components/AppIcon.vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
 
-const quickTools = [
-  { icon: '🔤', name: 'Base64', to: '/dev-tools' },
-  { icon: '🔗', name: 'URL', to: '/dev-tools' },
-  { icon: '📋', name: 'JSON', to: '/dev-tools' },
-  { icon: '⏰', name: '时间戳', to: '/dev-tools' },
-  { icon: '🎨', name: '颜色', to: '/dev-tools' },
-  { icon: '🔑', name: 'UUID', to: '/dev-tools' },
-  { icon: '🔐', name: '密码', to: '/dev-tools' },
-  { icon: '✔️', name: 'Hash', to: '/dev-tools' },
+const gates = [
+  { icon: 'bot', title: 'AI情报早报', desc: 'AI / Agent / Claude Code 每日精选', to: '/ai-news', gradient: 'from-accent to-[oklch(46%_0.13_285)]' },
+  { icon: 'trending-up', title: '股票资讯日报', desc: 'A股 / 港股 每日市场精选', to: '/stock-news', gradient: 'from-domain to-[oklch(45%_0.11_235)]' },
+  { icon: 'wrench', title: '开发工具箱', desc: '编码解码 / 格式化 / 转换工具', to: '/dev-tools', gradient: 'from-warn to-[oklch(60%_0.15_50)]' },
 ]
+
+// id 与 DevTools 工具一一对应，复用同一套 SVG 图标
+const quickTools = [
+  { id: 'base64', icon: 'binary', name: 'Base64' },
+  { id: 'url', icon: 'link', name: 'URL' },
+  { id: 'json', icon: 'braces', name: 'JSON' },
+  { id: 'timestamp', icon: 'clock', name: '时间戳' },
+  { id: 'color', icon: 'palette', name: '颜色' },
+  { id: 'uuid', icon: 'key', name: 'UUID' },
+  { id: 'password', icon: 'lock', name: '密码' },
+  { id: 'hash', icon: 'shield-check', name: 'Hash' },
+]
+
+const tickerWords = ['终身学习', 'AI 应用', '价值投资', '复盘纪律', '自动化', '长期主义', '写作输出']
 </script>
 
 <template>
-  <div class="min-h-screen bg-mesh relative overflow-hidden">
-    <!-- 背景装饰 -->
-    <div class="orb orb-1" />
-    <div class="orb orb-2" />
-    <div class="orb orb-3" />
-
+  <div class="min-h-screen">
     <!-- 导航栏 -->
     <Navbar />
 
-    <!-- 主内容 -->
-    <main class="relative z-10 max-w-6xl mx-auto px-4 py-12">
-      <!-- 欢迎卡片 -->
-      <div class="glass-dark rounded-3xl p-8 mb-8">
-        <h1 class="text-4xl font-display font-bold text-white mb-4">
-          欢迎回来，<span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-cyan-400">{{ auth.user?.username }}</span> 👋
-        </h1>
-        <p class="text-dark-300 text-lg">
-          你的个人工作空间已准备就绪，开始探索吧！
-        </p>
-      </div>
-
-      <!-- 功能卡片 -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <!-- AI资讯卡片 -->
+    <!-- Hero -->
+    <header class="max-w-[1080px] mx-auto px-6 pt-24 pb-16">
+      <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface border border-border text-[13px] font-medium tracking-wide text-fg">
+        <span class="w-[7px] h-[7px] rounded-full bg-success animate-pulse" />
+        工作空间已就绪
+      </span>
+      <h1 class="font-display text-[clamp(2.4rem,5.6vw,4.2rem)] font-extrabold leading-[1.12] tracking-[-0.025em] mt-6 mb-5 max-w-[15em]">
+        欢迎回来，<span class="relative whitespace-nowrap">{{ auth.user?.username || '朋友' }}<svg
+          class="absolute left-0 right-0 -bottom-[0.18em] w-full h-[0.28em] text-accent opacity-75"
+          viewBox="0 0 120 12"
+          preserveAspectRatio="none"
+        ><path
+          d="M2 8 Q 16 2, 32 7 T 62 7 T 92 6 T 118 7"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3.5"
+          stroke-linecap="round"
+        /></svg></span>
+      </h1>
+      <p class="text-lg text-muted max-w-[56ch]">
+        这里记录每日的 AI 情报与市场复盘，也收纳了趁手的开发小工具 —— 把重复的事交给工具，把思考留给自己。
+      </p>
+      <div class="flex gap-3 mt-8 flex-wrap">
         <router-link
           to="/ai-news"
-          class="group glass-dark rounded-2xl p-6 border border-transparent hover:border-indigo-500/30 transition-all duration-300 relative overflow-hidden"
+          class="od-btn od-btn-primary !px-[22px] !py-[13px] !text-[15px]"
         >
-          <!-- 悬浮光效 -->
-          <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500" />
-
-          <div class="relative">
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-              <span class="text-3xl">🤖</span>
-            </div>
-            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-              AI情报早报
-              <svg
-                class="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </h3>
-            <p class="text-dark-400 text-sm">
-              AI / Agent / Claude Code 每日精选
-            </p>
-          </div>
+          看看今日日报
+          <AppIcon
+            name="arrow-right"
+            :size="15"
+          />
         </router-link>
-
-        <!-- 股票资讯卡片 -->
-        <router-link
-          to="/stock-news"
-          class="group glass-dark rounded-2xl p-6 border border-transparent hover:border-emerald-500/30 transition-all duration-300 relative overflow-hidden"
-        >
-          <!-- 悬浮光效 -->
-          <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-green-500/0 group-hover:from-emerald-500/5 group-hover:to-green-500/5 transition-all duration-500" />
-
-          <div class="relative">
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-              <span class="text-3xl">📈</span>
-            </div>
-            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-              股票资讯日报
-              <svg
-                class="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </h3>
-            <p class="text-dark-400 text-sm">
-              A股 / 港股 每日市场精选
-            </p>
-          </div>
-        </router-link>
-
-        <!-- 开发工具卡片 -->
         <router-link
           to="/dev-tools"
-          class="group glass-dark rounded-2xl p-6 border border-transparent hover:border-cyan-500/30 transition-all duration-300 relative overflow-hidden"
+          class="od-btn od-btn-ghost !px-[22px] !py-[13px] !text-[15px]"
         >
-          <!-- 悬浮光效 -->
-          <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/0 to-blue-500/0 group-hover:from-cyan-500/5 group-hover:to-blue-500/5 transition-all duration-500" />
-
-          <div class="relative">
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-              <span class="text-3xl">⚙️</span>
-            </div>
-            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-              开发工具箱
-              <svg
-                class="w-4 h-4 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </h3>
-            <p class="text-dark-400 text-sm">
-              编码解码 / 格式化 / 转换工具
-            </p>
-          </div>
+          打开开发工具箱
         </router-link>
       </div>
 
-      <!-- 快捷工具 -->
-      <div class="glass-dark rounded-2xl p-6">
-        <h3 class="text-white/60 text-sm mb-4">
+      <!-- 跑马灯 -->
+      <div
+        class="ticker mt-14"
+        aria-hidden="true"
+      >
+        <div class="ticker-track">
+          <span
+            v-for="(word, i) in [...tickerWords, ...tickerWords]"
+            :key="i"
+          >{{ word }}</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 板块入口 -->
+    <div class="max-w-[1080px] mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-4 pb-16">
+      <router-link
+        v-for="gate in gates"
+        :key="gate.to"
+        :to="gate.to"
+        class="od-card group flex flex-col gap-3 p-[22px] transition-all duration-200 hover:-translate-y-1 hover:shadow-lift"
+      >
+        <span
+          class="w-11 h-11 rounded-[13px] grid place-items-center text-white bg-gradient-to-br"
+          :class="gate.gradient"
+        >
+          <AppIcon
+            :name="gate.icon"
+            :size="22"
+          />
+        </span>
+        <span class="font-display text-[17px] font-bold tracking-[-0.01em] text-fg flex items-center gap-2">
+          {{ gate.title }}
+          <AppIcon
+            name="arrow-right"
+            :size="15"
+            class="text-muted transition-all duration-200 group-hover:translate-x-1 group-hover:text-accent-strong"
+          />
+        </span>
+        <span class="text-[13.5px] text-muted">{{ gate.desc }}</span>
+      </router-link>
+    </div>
+
+    <!-- 常用工具 -->
+    <div class="max-w-[1080px] mx-auto px-6 pb-20">
+      <div class="od-card p-6">
+        <h3 class="text-muted text-sm font-medium mb-4">
           常用工具
         </h3>
-        <div class="grid grid-cols-4 md:grid-cols-8 gap-3">
+        <div class="flex flex-wrap gap-2">
           <router-link
             v-for="tool in quickTools"
-            :key="tool.name"
-            :to="tool.to"
-            class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-white/5 transition-colors group"
+            :key="tool.id"
+            to="/dev-tools"
+            class="od-chip"
           >
-            <span class="text-2xl group-hover:scale-110 transition-transform">{{ tool.icon }}</span>
-            <span class="text-white/50 text-xs group-hover:text-white/80 transition-colors">{{ tool.name }}</span>
+            <AppIcon
+              :name="tool.icon"
+              :size="14"
+              class="text-muted"
+            />
+            {{ tool.name }}
           </router-link>
         </div>
       </div>
-    </main>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="max-w-[1080px] mx-auto px-6 py-10 border-t border-border flex justify-between gap-4 flex-wrap text-[13px] text-muted">
+      <span>© 2026 Web Tools · 用心打磨，Claude Code 协助搭建</span>
+    </footer>
   </div>
 </template>

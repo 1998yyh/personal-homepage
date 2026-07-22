@@ -62,7 +62,7 @@ const onHexInput = (e: Event) => {
   <div class="space-y-6">
     <div class="flex items-center gap-4">
       <div
-        class="w-24 h-24 rounded-xl shadow-lg"
+        class="w-24 h-24 rounded-xl border border-border shadow-card"
         :style="{ backgroundColor: hex }"
       />
       <div>
@@ -77,39 +77,39 @@ const onHexInput = (e: Event) => {
 
     <div class="grid grid-cols-3 gap-4">
       <div>
-        <label class="block text-white/60 text-sm mb-2">HEX</label>
+        <label class="od-label">HEX</label>
         <input
           type="text"
           :value="hex"
-          class="w-full px-3 py-2 bg-white/5 rounded-lg text-white font-mono border border-white/10"
+          class="od-input font-mono"
           @input="onHexInput"
         >
       </div>
       <div>
-        <label class="block text-white/60 text-sm mb-2">RGB</label>
+        <label class="od-label">RGB</label>
         <input
           type="text"
           :value="`rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`"
           readonly
-          class="w-full px-3 py-2 bg-white/5 rounded-lg text-white font-mono border border-white/10"
+          class="od-input font-mono"
         >
       </div>
       <div>
-        <label class="block text-white/60 text-sm mb-2">HSL</label>
+        <label class="od-label">HSL</label>
         <input
           type="text"
           :value="`hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`"
           readonly
-          class="w-full px-3 py-2 bg-white/5 rounded-lg text-white font-mono border border-white/10"
+          class="od-input font-mono"
         >
       </div>
     </div>
 
-    <div class="bg-white/5 rounded-lg p-3">
-      <p class="text-white/40 text-sm">
+    <div class="od-panel p-3">
+      <p class="text-muted text-sm">
         CSS 变量:
       </p>
-      <code class="text-cyan-400 text-sm">--color: {{ hex }};</code>
+      <code class="text-accent-strong text-sm">--color: {{ hex }};</code>
     </div>
   </div>
 </template>

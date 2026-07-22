@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DailyReport } from '../../../types/daily-report'
+import AppIcon from '../../../components/AppIcon.vue'
 
 defineProps<{
   reports: DailyReport[]
@@ -30,7 +31,7 @@ function formatDate(dateStr: string) {
     <div
       v-for="i in 5"
       :key="i"
-      class="h-14 rounded-lg bg-white/5 animate-pulse"
+      class="h-14 rounded-[10px] bg-fg/5 animate-pulse"
     />
   </div>
 
@@ -39,10 +40,12 @@ function formatDate(dateStr: string) {
     v-else-if="reports.length === 0"
     class="text-center py-12"
   >
-    <div class="text-4xl mb-3">
-      📭
-    </div>
-    <p class="text-white/40 text-sm">
+    <AppIcon
+      name="inbox"
+      :size="36"
+      class="mx-auto mb-3 text-muted"
+    />
+    <p class="text-muted text-sm">
       暂无日报
     </p>
   </div>
@@ -55,22 +58,19 @@ function formatDate(dateStr: string) {
     <button
       v-for="report in reports"
       :key="report.id"
-      class="w-full text-left transition-all duration-150 group relative py-3 px-3 rounded-lg"
-      :class="selectedReport?.id === report.id ? 'bg-white/[0.08]' : 'hover:bg-white/[0.03]'"
+      class="od-item w-full text-left group relative py-3 px-3 cursor-pointer"
+      :class="{ active: selectedReport?.id === report.id }"
       @click="emit('select', report)"
     >
       <!-- 日期行 -->
       <div class="flex items-baseline gap-2 mb-1">
         <span
-          class="text-base font-medium"
-          :class="selectedReport?.id === report.id ? 'text-white' : 'text-white/70'"
+          class="text-base font-medium tabular-nums"
+          :class="selectedReport?.id === report.id ? 'text-fg' : 'text-fg/70'"
         >
           {{ formatDate(report.date).month }}月{{ formatDate(report.date).day }}日
         </span>
-        <span
-          class="text-xs"
-          :class="selectedReport?.id === report.id ? 'text-white/50' : 'text-white/30'"
-        >
+        <span class="text-xs text-muted">
           {{ formatDate(report.date).weekDay }}
         </span>
       </div>
@@ -78,7 +78,7 @@ function formatDate(dateStr: string) {
       <!-- 标题预览 -->
       <p
         class="text-xs truncate"
-        :class="selectedReport?.id === report.id ? 'text-white/60' : 'text-white/30'"
+        :class="selectedReport?.id === report.id ? 'text-muted' : 'text-muted/70'"
       >
         {{ report.title }}
       </p>

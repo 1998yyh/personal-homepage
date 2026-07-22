@@ -21,32 +21,32 @@ const copyOutput = () => {
 <template>
   <div class="space-y-6">
     <div>
-      <label class="block text-white/60 text-sm mb-2">输入</label>
+      <label class="od-label">输入</label>
       <textarea
         v-model="input"
         placeholder="输入内容..."
-        class="w-full h-32 px-3 py-2 bg-white/5 rounded-lg text-white font-mono border border-white/10 resize-none focus:border-white/20 focus:outline-none"
+        class="od-input h-32 font-mono !text-[13px] resize-none"
       />
     </div>
 
-    <div class="flex gap-2">
+    <div class="flex gap-2 flex-wrap">
       <button
         v-for="btn in buttons"
         :key="btn.label"
-        class="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
+        class="od-btn od-btn-soft"
         @click="btn.onClick"
       >
         {{ btn.label }}
       </button>
       <button
         :disabled="!output"
-        class="px-4 py-2 bg-white/5 text-white/60 rounded-lg hover:bg-white/10 disabled:opacity-50"
+        class="od-btn od-btn-primary"
         @click="copyOutput"
       >
         复制结果
       </button>
       <button
-        class="px-4 py-2 bg-white/5 text-white/60 rounded-lg hover:bg-white/10"
+        class="od-btn od-btn-ghost"
         @click="input = ''"
       >
         清空
@@ -55,17 +55,17 @@ const copyOutput = () => {
 
     <div
       v-if="error"
-      class="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"
+      class="od-error"
     >
       {{ error }}
     </div>
 
     <div>
-      <label class="block text-white/60 text-sm mb-2">输出</label>
+      <label class="od-label">输出</label>
       <textarea
         :value="output"
         readonly
-        :class="`w-full ${outputHeight} px-3 py-2 bg-white/5 rounded-lg text-white font-mono border border-white/10 resize-none`"
+        :class="`od-input ${outputHeight} font-mono !text-[13px] resize-none`"
       />
     </div>
   </div>

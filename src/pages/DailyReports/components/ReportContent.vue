@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { DailyReport } from '../../../types/daily-report'
 import { renderMarkdown } from '../../../lib/markdown'
+import AppIcon from '../../../components/AppIcon.vue'
 
 const props = withDefaults(defineProps<{
   report: DailyReport | null
@@ -30,9 +31,9 @@ const formattedDate = computed(() =>
   >
     <div class="text-center">
       <div
-        class="w-10 h-10 border-3 border-white/10 border-t-white/40 rounded-full animate-spin mx-auto mb-3"
+        class="w-10 h-10 border-3 border-fg/10 border-t-fg/40 rounded-full animate-spin mx-auto mb-3"
       />
-      <p class="text-white/30 text-sm">
+      <p class="text-muted text-sm">
         加载中...
       </p>
     </div>
@@ -44,10 +45,12 @@ const formattedDate = computed(() =>
     class="h-full flex items-center justify-center"
   >
     <div class="text-center">
-      <div class="text-5xl mb-4">
-        📰
-      </div>
-      <p class="text-white/30">
+      <AppIcon
+        name="newspaper"
+        :size="44"
+        class="mx-auto mb-4 text-muted"
+      />
+      <p class="text-muted">
         选择一份日报查看详情
       </p>
     </div>
@@ -61,10 +64,10 @@ const formattedDate = computed(() =>
   >
     <!-- 标题 -->
     <div class="mb-8">
-      <h1 class="text-xl font-semibold text-white mb-2">
+      <h1 class="text-xl font-display font-bold tracking-[-0.01em] text-fg mb-2">
         {{ report.title }}
       </h1>
-      <p class="text-white/40 text-sm">
+      <p class="text-muted text-sm tabular-nums">
         {{ formattedDate }}
       </p>
     </div>

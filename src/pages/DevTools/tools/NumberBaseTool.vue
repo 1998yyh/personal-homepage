@@ -25,7 +25,7 @@ const convert = () => {
     <div class="flex gap-4">
       <select
         v-model.number="base"
-        class="px-3 py-2 bg-white/5 rounded-lg text-white border border-white/10"
+        class="od-input !w-auto"
       >
         <option :value="2">
           二进制
@@ -44,10 +44,10 @@ const convert = () => {
         v-model="input"
         type="text"
         placeholder="输入数值..."
-        class="flex-1 px-3 py-2 bg-white/5 rounded-lg text-white font-mono border border-white/10"
+        class="od-input flex-1 font-mono"
       >
       <button
-        class="px-6 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20"
+        class="od-btn od-btn-primary shrink-0"
         @click="convert"
       >
         转换
@@ -61,12 +61,12 @@ const convert = () => {
       <div
         v-for="(value, name) in results"
         :key="name"
-        class="bg-white/5 rounded-lg p-4"
+        class="od-panel p-4"
       >
-        <p class="text-white/40 text-sm mb-1">
+        <p class="text-muted text-sm mb-1">
           {{ name }}
         </p>
-        <p class="text-white font-mono text-lg">
+        <p class="text-fg font-mono text-lg">
           {{ value }}
         </p>
       </div>
