@@ -10,6 +10,7 @@ const navItems = [
   { path: '/ai-news', label: 'AI资讯', emoji: '🤖', activePattern: /\/ai-news/ },
   { path: '/stock-news', label: '股票资讯', emoji: '📈', activePattern: /\/stock-news/ },
   { path: '/dev-tools', label: '开发工具', emoji: '⚙️', activePattern: /\/dev-tools/ },
+  { path: '/agents', label: 'Agent', emoji: '🧠', activePattern: /\/agents/ },
 ]
 
 const isActive = (pattern: RegExp) => pattern.test(route.path)

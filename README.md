@@ -49,6 +49,12 @@ pnpm dev
 ### 🧰 开发工具箱
 - JSON、Base64、URL、时间戳、UUID、哈希等 11 个在线工具
 
+### 🧠 Agent 对话
+- Agent 配置管理（多供应商、自定义模型、API Key 加密存储）
+- SSE 流式对话，工具调用（联网搜索/计算器）实时展示
+- 会话懒创建、删除、历史消息分页加载
+- 设计文档见 `docs/superpowers/specs/2026-07-24-agent-pages-design.md`
+
 ### 🎨 设计特点
 - 现代暗色玻璃态设计（Glassmorphism）
 - 流畅的动画效果
@@ -84,8 +90,17 @@ src/
 │       ├── DevToolsPage.vue
 │       ├── components/     # ToolLayout
 │       └── tools/          # 11 个工具 SFC
+├── composables/
+│   └── useAgentStream.ts   # SSE 流式对话（axios onDownloadProgress 增量解析）
+├── pages（续）
+│   └── Agents/             # Agent 管理与对话
+│       ├── AgentsPage.vue      # Agent 卡片列表 + 表单弹窗
+│       ├── AgentChatPage.vue   # 会话列表 + 流式聊天
+│       ├── components/         # AgentFormModal / ConversationList / MessageBubble / ToolCallCard
+│       └── utils/              # groupMessages（历史消息工具调用归组）
 └── types/
-    └── daily-report.ts     # 日报类型定义
+    ├── daily-report.ts     # 日报类型定义
+    └── agent.ts            # Agent/会话/消息/SSE 事件类型
 ```
 
 ## API 接口

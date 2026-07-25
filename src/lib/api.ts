@@ -70,6 +70,8 @@ export interface User {
   id: string;
   email: string;
   username: string;
+  /** 用户角色（MCP stdio 配置等管理员能力的前端判断依据） */
+  role: 'admin' | 'user';
   createdAt: string;
   updatedAt: string;
 }

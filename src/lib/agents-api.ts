@@ -1,0 +1,69 @@
+import api from './api';
+import type {
+  Agent,
+  AgentPayload,
+  ChatMessage,
+  Conversation,
+  PagedResponse,
+} from '../types/agent';
+
+// 分页常量（设计文档 §10：Agent 一次拉全 / 会话滚动加载 / 消息向上翻页）
+export const AGENTS_LIMIT = 100;
+export const CONVERSATIONS_LIMIT = 20;
+export const MESSAGES_LIMIT = 30;
+
+export const agentsApi = {
+  // ---- Agent CRUD ----
+  list: async (page = 1) => {
+    const { data } = await api.get<PagedResponse<Agent>>('/agents', {
+      params: { page, limit: AGENTS_LIMIT },
+    });
+    return data;
+  },
+
+  getById: async (id: string) => {
+    const { data } = await api.get<Agent>(`/agents/${id}`);
+    return data;
+  },
+
+  create: async (payload: AgentPayload) => {
+    const { data } = await api.post<Agent>('/agents', payload);
+    return data;
+  },
+
+  update: async (id: string, payload: Partial<AgentPayload>) => {
+    const { data } = await api.patch<Agent>(`/agents/${id}`, payload);
+    return data;
+  },
+
+  remove: async (id: string) => {
+    await api.delete(`/agents/${id}`);
+  },
+
+  // ---- 会话 ----
+  listConversations: async (agentId: string, page = 1) => {
+    const { data } = await api.get<PagedResponse<Conversation>>(`/agents/${agentId}/conversations`, {
+      params: { page, limit: CONVERSATIONS_LIMIT },
+    });
+    return data;
+  },
+
+  createConversation: async (agentId: string) => {
+    const { data } = await api.post<Conversation>(`/agents/${agentId}/conversations`, {});
+    return data;
+  },
+
+  removeConversation: async (id: string) => {
+    await api.delete(`/conversations/${id}`);
+  },
+
+  /** 消息历史：后端 DESC 分页，page=1 为最新一页 */
+  listMessages: async (conversationId: string, page = 1) => {
+    const { data } = await api.get<PagedResponse<ChatMessage>>(`/conversations/${conversationId}/messages`, {
+      params: { page, limit: MESSAGES_LIMIT },
+    });
+    return data;
+  },
+};
+
+export default agentsApi;
