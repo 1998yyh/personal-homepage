@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股票资讯日报 · Web Tools 设计稿</title>
+<script>try{const t=localStorage.getItem('zhe-theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<nav class="topnav" data-od-id="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="home.html">
+      <span class="brand-badge">哲</span>
+      <span class="brand-name">Web Tools</span>
+    </a>
+    <div class="nav-links">
+      <a class="od-nav-link" href="ai-reports.html">AI资讯</a>
+      <a class="od-nav-link active" href="stock-reports.html">股票资讯</a>
+      <a class="od-nav-link" href="devtools.html">开发工具</a>
+    </div>
+    <button class="od-icon-btn" data-theme-toggle aria-label="切换主题"></button>
+    <a class="od-nav-link" href="login.html">登录</a>
+  </div>
+</nav>
+
+<main class="container-wide page-main" data-od-id="stock-reports">
+  <div>
+    <p class="eyebrow" style="color:var(--domain)">Stock Daily</p>
+    <h2 class="page-title">股票资讯日报</h2>
+    <p class="page-desc">A股 / 港股 每日市场精选，收盘后十分钟读完今天该知道的事。</p>
+  </div>
+
+  <div class="split">
+    <!-- 左侧：历史日报 -->
+    <div class="od-card split-side" data-od-id="report-list">
+      <div class="split-side-head"><h3>历史日报</h3></div>
+      <div class="split-side-body" id="report-list"></div>
+    </div>
+
+    <!-- 右侧：日报正文（domain 主题） -->
+    <div class="od-card split-main" data-od-id="report-content">
+      <div class="markdown-content theme-stock" id="report-content"></div>
+    </div>
+  </div>
+</main>
+
+<script src="shared.js"></script>
+<script>
+const REPORTS = [
+  {
+    id: 1, date: '2026-07-23', week: '周三', title: 'A股缩量整理，港股科技领涨',
+    body: `
+      <h2>指数收盘</h2>
+      <table>
+        <thead><tr><th>指数</th><th>收盘</th><th>涨跌幅</th></tr></thead>
+        <tbody>
+          <tr><td>上证指数</td><td>3,847.22</td><td class="num-down">-0.31%</td></tr>
+          <tr><td>深证成指</td><td>12,653.08</td><td class="num-down">-0.18%</td></tr>
+          <tr><td>创业板指</td><td>2,741.55</td><td class="num-up">+0.42%</td></tr>
+          <tr><td>恒生指数</td><td>19,882.40</td><td class="num-up">+1.15%</td></tr>
+          <tr><td>恒生科技</td><td>4,327.91</td><td class="num-up">+2.03%</td></tr>
+        </tbody>
+      </table>
+      <h2>盘面回顾</h2>
+      <ul>
+        <li><strong>两市成交 8,432 亿，连续三日缩量</strong>观望情绪浓厚，资金等待中报验证；缩量整理阶段不宜追高。</li>
+        <li><strong>港股科技股强势</strong>互联网平台业绩超预期带动恒生科技涨逾 2%，南向资金净流入 68 亿港币。</li>
+        <li><strong>红利板块回调</strong>银行、公用事业小幅回落，属正常轮动，股息率逻辑未变。</li>
+      </ul>
+      <h2>复盘笔记</h2>
+      <p>缩量市场里的轮动没有持续性，<a href="#">保持既定仓位</a>，把精力放在中报业绩的跟踪上，而不是日内的涨跌。</p>
+      <blockquote>纪律：不在缩量整理期加仓，不因单日波动改变既定计划。</blockquote>`
+  },
+  {
+    id: 2, date: '2026-07-22', week: '周二', title: '北向资金回流，红利板块走强',
+    body: `
+      <h2>指数收盘</h2>
+      <table>
+        <thead><tr><th>指数</th><th>收盘</th><th>涨跌幅</th></tr></thead>
+        <tbody>
+          <tr><td>上证指数</td><td>3,859.17</td><td class="num-up">+0.58%</td></tr>
+          <tr><td>深证成指</td><td>12,675.84</td><td class="num-up">+0.33%</td></tr>
+          <tr><td>创业板指</td><td>2,730.12</td><td class="num-down">-0.22%</td></tr>
+          <tr><td>恒生指数</td><td>19,656.30</td><td class="num-up">+0.44%</td></tr>
+        </tbody>
+      </table>
+      <h2>盘面回顾</h2>
+      <ul>
+        <li><strong>北向资金净流入 52 亿</strong>为近两周最大单日流入，主要加仓白酒与银行。</li>
+        <li><strong>红利指数创阶段新高</strong>十年期国债收益率下行背景下，高股息资产的配置价值继续被重估。</li>
+      </ul>
+      <h2>复盘笔记</h2>
+      <p>资金在「确定性」上达成共识：要么股息确定，要么业绩确定。中报季这个趋势只会加强。</p>`
+  },
+  {
+    id: 3, date: '2026-07-21', week: '周一', title: '中报季开启：关注业绩确定性',
+    body: `
+      <h2>本周展望</h2>
+      <p>中报披露正式开启，首批 120 家公司本周发布业绩预告。历史规律：中报季超额收益集中在<strong>业绩超预期的细分龙头</strong>，而非题材炒作。</p>
+      <h2>跟踪清单</h2>
+      <ul>
+        <li><strong>出口链</strong>汇率与海外补库存双重利好，关注家电、工程机械的毛利率变化。</li>
+        <li><strong>电力</strong>迎峰度夏用电量创新高，火电盈利修复 + 绿电装机放量两条线并行。</li>
+        <li><strong>半导体设备</strong>国产替代订单饱满，重点看合同负债环比变化。</li>
+      </ul>
+      <blockquote>价值投资的赔率，藏在对业绩的提前研究里，而不是公告后的追高中。</blockquote>`
+  },
+];
+
+const listEl = document.getElementById('report-list');
+const contentEl = document.getElementById('report-content');
+
+function fmtDate(d) {
+  const dt = new Date(d);
+  return { label: `${dt.getMonth() + 1}月${dt.getDate()}日`, full: `${dt.getFullYear()} 年 ${dt.getMonth() + 1} 月 ${dt.getDate()} 日` };
+}
+
+function renderList(activeId) {
+  listEl.innerHTML = REPORTS.map((r) => `
+    <button class="od-item report-item ${r.id === activeId ? 'active' : ''}" data-id="${r.id}">
+      <span class="d-row"><span class="d-date">${fmtDate(r.date).label}</span><span class="d-week">${r.week}</span></span>
+      <p class="d-title">${r.title}</p>
+    </button>`).join('');
+  listEl.querySelectorAll('.report-item').forEach((btn) => {
+    btn.addEventListener('click', () => select(+btn.dataset.id));
+  });
+}
+
+function select(id) {
+  const r = REPORTS.find((x) => x.id === id);
+  renderList(id);
+  contentEl.innerHTML = `
+    <div class="doc-head"><h1>${r.title}</h1><p>${fmtDate(r.date).full}</p></div>
+    ${r.body}`;
+  contentEl.scrollTop = 0;
+}
+
+select(REPORTS[0].id);
+</script>
+</body>
+</html>

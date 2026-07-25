@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设计稿总览 · Web Tools</title>
+<script>try{const t=localStorage.getItem('zhe-theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<nav class="topnav" data-od-id="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-badge">哲</span>
+      <span class="brand-name">Web Tools <span style="color:var(--muted);font-weight:500;font-size:13px;margin-left:4px">设计稿</span></span>
+    </a>
+    <div class="nav-links"></div>
+    <button class="od-icon-btn" data-theme-toggle aria-label="切换主题"></button>
+  </div>
+</nav>
+
+<header class="container ov-hero" data-od-id="overview-hero">
+  <span class="status-pill"><span class="status-dot"></span>v1.0 · 与 src/index.css 令牌同步</span>
+  <h1>Web Tools 全站设计稿</h1>
+  <p class="page-desc" style="font-size:16px">
+    覆盖首页、AI / 股票日报、开发工具箱与重设计的登录注册，共 6 块画板。
+    亮 / 暗双主题由右上角切换实时呈现（与线上一致，写入 <code style="font-family:var(--font-mono);font-size:13px;background:color-mix(in oklch, var(--fg) 8%, transparent);padding:2px 6px;border-radius:4px">zhe-theme</code>）。
+    每屏 accent 点缀不超过两次，股票板块使用领域色 <strong style="color:var(--domain)">domain</strong> 与钴蓝主色拉开。
+  </p>
+</header>
+
+<!-- 设计令牌 -->
+<section class="container ov-section" data-od-id="tokens">
+  <p class="eyebrow">Design Tokens</p>
+  <h2>颜色令牌（随主题实时切换）</h2>
+  <div class="swatches" id="swatches"></div>
+  <p style="margin-top:14px;font-size:13px;color:var(--muted)">点击色板复制 oklch 值 · 完整规范见 <code style="font-family:var(--font-mono);font-size:12px">brand-spec.md</code> <span class="copied-tip" id="copy-tip"></span></p>
+</section>
+
+<!-- 画板 -->
+<section class="container ov-section" data-od-id="screens">
+  <p class="eyebrow">Artboards</p>
+  <h2>六块画板</h2>
+  <div class="screen-grid">
+    <a class="od-card screen-card" href="home.html" data-od-id="screen-home">
+      <span class="icon-tile grad-soft"><i data-icon="home" data-size="20"></i></span>
+      <span class="t">首页 <i data-icon="arrow-right" data-size="15"></i></span>
+      <span class="d">Hero + 手绘下划线、跑马灯、三大板块入口、常用工具 chips。</span>
+      <span class="tags"><span class="tag">1440 桌面</span><span class="tag">响应式</span></span>
+    </a>
+    <a class="od-card screen-card" href="ai-reports.html" data-od-id="screen-ai">
+      <span class="icon-tile grad-accent"><i data-icon="bot" data-size="20"></i></span>
+      <span class="t">AI 情报早报 <i data-icon="arrow-right" data-size="15"></i></span>
+      <span class="d">左侧历史日报列表 + 右侧 Markdown 阅读区，点击列表实时切换正文。</span>
+      <span class="tags"><span class="tag">双栏工作区</span><span class="tag">可交互</span></span>
+    </a>
+    <a class="od-card screen-card" href="stock-reports.html" data-od-id="screen-stock">
+      <span class="icon-tile grad-domain"><i data-icon="trending-up" data-size="20"></i></span>
+      <span class="t">股票资讯日报 <i data-icon="arrow-right" data-size="15"></i></span>
+      <span class="d">同构布局，链接与引用线换领域青蓝 domain；含指数行情表（红涨绿跌）。</span>
+      <span class="tags"><span class="tag">domain 主题</span><span class="tag">可交互</span></span>
+    </a>
+    <a class="od-card screen-card" href="devtools.html" data-od-id="screen-devtools">
+      <span class="icon-tile grad-warn"><i data-icon="wrench" data-size="20"></i></span>
+      <span class="t">开发工具箱 <i data-icon="arrow-right" data-size="15"></i></span>
+      <span class="d">11 个工具全部可用：Base64 / JSON / 时间戳 / 颜色 / UUID / 密码 / Hash…</span>
+      <span class="tags"><span class="tag">真实可算</span><span class="tag">搜索过滤</span></span>
+    </a>
+    <a class="od-card screen-card" href="login.html" data-od-id="screen-login">
+      <span class="icon-tile grad-soft"><i data-icon="log-in" data-size="20"></i></span>
+      <span class="t">登录（重设计） <i data-icon="arrow-right" data-size="15"></i></span>
+      <span class="d">auth-shell 左右分栏：左品牌叙事 + 信任锚点，右表单；密码可见性切换。</span>
+      <span class="tags"><span class="tag">分栏布局</span><span class="tag">表单校验</span></span>
+    </a>
+    <a class="od-card screen-card" href="register.html" data-od-id="screen-register">
+      <span class="icon-tile grad-soft"><i data-icon="user-plus" data-size="20"></i></span>
+      <span class="t">注册（重设计） <i data-icon="arrow-right" data-size="15"></i></span>
+      <span class="d">同款 auth-shell：四字段表单 + 密码强度条，完整还原线上校验规则。</span>
+      <span class="tags"><span class="tag">分栏布局</span><span class="tag">强度反馈</span></span>
+    </a>
+  </div>
+</section>
+
+<footer class="container site-foot" data-od-id="footer">
+  <span>© 2026 Web Tools 设计稿 · 令牌与 src/index.css 同源</span>
+  <span>后续将迁移至 Pencil .pen 画板</span>
+</footer>
+
+<script src="shared.js"></script>
+<script>
+const TOKENS = [
+  ['--bg', 'oklch(98% 0.004 240)', 'var(--bg)'],
+  ['--surface', 'oklch(100% 0 0)', 'var(--surface)'],
+  ['--fg', 'oklch(20% 0.02 240)', 'var(--fg)'],
+  ['--muted', 'oklch(50% 0.018 240)', 'var(--muted)'],
+  ['--border', 'oklch(90% 0.006 240)', 'var(--border)'],
+  ['--accent', 'oklch(52% 0.16 258)', 'var(--accent)'],
+  ['--accent-soft', 'accent 12% + surface', 'var(--accent-soft)'],
+  ['--accent-strong', 'oklch(42% 0.14 258)', 'var(--accent-strong)'],
+  ['--success', 'oklch(62% 0.14 155)', 'var(--success)'],
+  ['--warn', 'oklch(70% 0.14 75)', 'var(--warn)'],
+  ['--danger', 'oklch(58% 0.18 25)', 'var(--danger)'],
+  ['--domain', 'oklch(60% 0.10 215)', 'var(--domain)'],
+];
+const tip = document.getElementById('copy-tip');
+document.getElementById('swatches').innerHTML = TOKENS.map(([name, val, css]) => `
+  <div class="od-card swatch" data-val="${val}" title="点击复制">
+    <span class="chip" style="background:${css}"></span>
+    <span class="name">${name}</span>
+    <span class="val">${val}</span>
+  </div>`).join('');
+document.querySelectorAll('.swatch').forEach((el) => {
+  el.addEventListener('click', () => odCopy(`${el.querySelector('.name').textContent}: ${el.dataset.val}`, tip));
+});
+</script>
+</body>
+</html>

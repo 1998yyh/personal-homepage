@@ -1,0 +1,11 @@
+{
+  "kind": "critique-panel",
+  "score": 4,
+  "axes": {
+    "clarity": { "score": 5, "notes": "auth-shell 职责清晰：左栏回答「这是什么、为什么信它」，右栏只做表单；移动端折单栏保留品牌条" },
+    "hierarchy": { "score": 4, "notes": "左栏 display 大标题 + 手绘下划线呼应首页 Hero；表单 label/input/error 层级沿用 od- 体系" },
+    "typography": { "score": 4, "notes": "三栈各司其职；左栏 h2 clamp 缩放，信任锚点 b+span 双行层级清楚" },
+    "motion": { "score": 4, "notes": "密码可见性切换、强度条 4 级渐变、按钮下沉；reduced-motion 全局回退仍生效" },
+    "brand": { "score": 4, "notes": "左栏底色用 accent-soft 计算字面值（渲染引擎 color-mix 色相偏差已修复并注释）；accent 本屏 2 次（下划线 + 主 CTA），守住预算" }
+  }
+}
