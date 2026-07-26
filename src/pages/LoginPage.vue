@@ -1,20 +1,82 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { AxiosError } from 'axios'
 import { useAuthStore } from '../stores/auth'
 import { authApi } from '../lib/api'
+import AuthShell from '../components/AuthShell.vue'
+import AppIcon from '../components/AppIcon.vue'
+
+type FieldKey = 'login' | 'password'
 
 const login = ref('')
 const password = ref('')
+const showPassword = ref(false)
 const error = ref('')
 const isLoading = ref(false)
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
+// 字段级状态（登录只有非空约束，出错后输入即清除）
+const fieldState = reactive<Record<FieldKey, { status: '' | 'err'; msg: string }>>({
+  login: { status: '', msg: '' },
+  password: { status: '', msg: '' },
+})
+const values: Record<FieldKey, typeof login> = { login, password }
+const emptyMsg: Record<FieldKey, string> = { login: '请输入邮箱或用户名', password: '请输入密码' }
+
+const fieldInputs = new Map<FieldKey, HTMLInputElement>()
+const setFieldInput = (key: FieldKey) => (el: unknown) => {
+  if (el instanceof HTMLInputElement) fieldInputs.set(key, el)
+}
+
+const clearField = (key: FieldKey) => {
+  fieldState[key].status = ''
+  fieldState[key].msg = ''
+}
+const onFieldBlur = (key: FieldKey) => {
+  if (values[key].value.trim()) clearField(key)
+}
+const onFieldInput = (key: FieldKey) => {
+  if (fieldState[key].status === 'err' && values[key].value.trim()) clearField(key)
+}
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value
+  fieldInputs.get('password')?.focus()
+}
+
+// 聚焦并弹簧提示首个问题字段
+const shakeAndFocus = (key: FieldKey) => {
+  const input = fieldInputs.get(key)
+  input?.focus()
+  const box = input?.closest('.field')
+  if (box) {
+    box.classList.remove('anim-shake')
+    void (box as HTMLElement).offsetWidth
+    box.classList.add('anim-shake')
+  }
+}
+
 const handleSubmit = async () => {
   error.value = ''
+
+  let firstBad: FieldKey | null = null
+  for (const key of ['login', 'password'] as FieldKey[]) {
+    if (!values[key].value.trim()) {
+      fieldState[key].status = 'err'
+      fieldState[key].msg = emptyMsg[key]
+      if (!firstBad) firstBad = key
+    } else {
+      clearField(key)
+    }
+  }
+  if (firstBad) {
+    shakeAndFocus(firstBad)
+    return
+  }
+
   isLoading.value = true
   try {
     const { data } = await authApi.login({ login: login.value, password: password.value })
@@ -30,145 +92,120 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-mesh flex items-center justify-center p-4 relative overflow-hidden">
-    <!-- 背景装饰 -->
-    <div class="orb orb-1" />
-    <div class="orb orb-2" />
-    <div class="orb orb-3" />
+  <AuthShell lede="欢迎回来——今日的情报与复盘已经备好。">
+    <div class="auth-logo anim-rise d1">
+      <h1>欢迎回来</h1>
+      <p>登录你的账户继续探索</p>
+    </div>
 
-    <!-- 登录卡片 -->
-    <div class="w-full max-w-md relative z-10">
-      <div class="glass-dark rounded-3xl p-8 shadow-2xl">
-        <!-- Logo & 标题 -->
-        <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 mb-4 shadow-lg shadow-primary-500/30">
-            <svg
-              class="w-8 h-8 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-          </div>
-          <h1 class="text-3xl font-display font-bold text-white mb-2">
-            欢迎回来
-          </h1>
-          <p class="text-dark-300">
-            登录你的账户继续探索
-          </p>
-        </div>
-
-        <!-- 表单 -->
-        <form
-          class="space-y-5"
-          @submit.prevent="handleSubmit"
+    <form
+      class="auth-form anim-rise d2"
+      novalidate
+      @submit.prevent="handleSubmit"
+    >
+      <div class="field">
+        <label
+          class="od-label"
+          for="login"
+        >邮箱或用户名</label>
+        <input
+          id="login"
+          :ref="setFieldInput('login')"
+          v-model="login"
+          type="text"
+          class="od-input"
+          :class="fieldState.login.status"
+          placeholder="输入邮箱或用户名"
+          autocomplete="username"
+          @blur="onFieldBlur('login')"
+          @input="onFieldInput('login')"
         >
-          <div>
-            <label class="block text-sm font-medium text-dark-200 mb-2">
-              邮箱或用户名
-            </label>
-            <input
-              v-model="login"
-              type="text"
-              class="input-glass"
-              placeholder="输入邮箱或用户名"
-              required
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-dark-200 mb-2">
-              密码
-            </label>
-            <input
-              v-model="password"
-              type="password"
-              class="input-glass"
-              placeholder="输入密码"
-              required
-            >
-          </div>
-
-          <div
-            v-if="error"
-            class="error-message"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            {{ error }}
-          </div>
-
-          <button
-            type="submit"
-            :disabled="isLoading"
-            class="btn-primary flex items-center justify-center gap-2"
-          >
-            <template v-if="isLoading">
-              <svg
-                class="animate-spin h-5 w-5"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                  fill="none"
-                />
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              登录中...
-            </template>
-            <template v-else>
-              登录
-            </template>
-          </button>
-        </form>
-
-        <!-- 分割线 -->
-        <div class="flex items-center gap-4 my-6">
-          <div class="flex-1 h-px bg-white/10" />
-          <span class="text-dark-400 text-sm">或</span>
-          <div class="flex-1 h-px bg-white/10" />
-        </div>
-
-        <!-- 注册链接 -->
-        <p class="text-center text-dark-300">
-          还没有账户？
-          <router-link
-            to="/register"
-            class="text-primary-400 hover:text-primary-300 font-medium transition-colors"
-          >
-            立即注册
-          </router-link>
+        <p
+          class="field-msg"
+          :class="fieldState.login.status"
+        >
+          <AppIcon
+            v-if="fieldState.login.msg"
+            name="alert-circle"
+            :size="13"
+          />
+          <span>{{ fieldState.login.msg }}</span>
         </p>
       </div>
 
-      <!-- 底部信息 -->
-      <p class="text-center text-dark-400 text-sm mt-6">
-        © 2026 Web Tools. All rights reserved.
-      </p>
+      <div class="field">
+        <label
+          class="od-label"
+          for="password"
+        >密码</label>
+        <div class="pwd-wrap">
+          <input
+            id="password"
+            :ref="setFieldInput('password')"
+            v-model="password"
+            :type="showPassword ? 'text' : 'password'"
+            class="od-input"
+            :class="fieldState.password.status"
+            placeholder="输入密码"
+            autocomplete="current-password"
+            @blur="onFieldBlur('password')"
+            @input="onFieldInput('password')"
+          >
+          <button
+            type="button"
+            class="pwd-toggle"
+            :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+            @click="togglePassword"
+          >
+            <AppIcon
+              :name="showPassword ? 'eye-off' : 'eye'"
+              :size="17"
+            />
+          </button>
+        </div>
+        <p
+          class="field-msg"
+          :class="fieldState.password.status"
+        >
+          <AppIcon
+            v-if="fieldState.password.msg"
+            name="alert-circle"
+            :size="13"
+          />
+          <span>{{ fieldState.password.msg }}</span>
+        </p>
+      </div>
+
+      <div
+        v-if="error"
+        class="od-error with-icon"
+      >
+        <AppIcon
+          name="alert-circle"
+          :size="16"
+        />
+        <span>{{ error }}</span>
+      </div>
+
+      <button
+        type="submit"
+        class="od-btn od-btn-primary od-btn-lg od-btn-block"
+        :disabled="isLoading"
+      >
+        {{ isLoading ? '登录中...' : '登录' }}
+      </button>
+    </form>
+
+    <div class="auth-divider anim-rise d3">
+      <span>或</span>
     </div>
-  </div>
+    <p class="auth-switch anim-rise d4">
+      还没有账户？ <router-link to="/register">
+        立即注册
+      </router-link>
+    </p>
+    <p class="auth-foot anim-rise d5">
+      © 2026 Web Tools · 全站匿名可访问，登录用于展示个人信息
+    </p>
+  </AuthShell>
 </template>

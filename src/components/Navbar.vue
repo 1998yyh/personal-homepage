@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useTheme } from '../composables/useTheme'
 import AppIcon from './AppIcon.vue'
 
 const route = useRoute()
@@ -16,17 +16,8 @@ const navItems = [
 
 const isActive = (pattern: RegExp) => pattern.test(route.path)
 
-// 亮/暗主题：初始值由 index.html 内联脚本写入 <html data-theme>
-const theme = ref(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
-const toggleTheme = () => {
-  theme.value = theme.value === 'dark' ? 'light' : 'dark'
-  document.documentElement.dataset.theme = theme.value
-  try {
-    localStorage.setItem('zhe-theme', theme.value)
-  } catch {
-    // 隐私模式下静默失败，仅本次会话生效
-  }
-}
+// 亮/暗主题切换（与认证页共用同一逻辑）
+const { theme, toggleTheme } = useTheme()
 
 // 守卫只在导航时触发，光 logout 不会离开当前页，必须显式跳转
 const handleLogout = () => {

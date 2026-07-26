@@ -1,47 +1,143 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { AxiosError } from 'axios'
 import { useAuthStore } from '../stores/auth'
 import { authApi } from '../lib/api'
+import AuthShell from '../components/AuthShell.vue'
+import AppIcon from '../components/AppIcon.vue'
+
+type FieldKey = 'email' | 'username' | 'password' | 'confirm'
+type FieldStatus = '' | 'err' | 'ok'
 
 const email = ref('')
 const username = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const showPassword = ref(false)
+const meterLevel = ref(0)
 const error = ref('')
 const isLoading = ref(false)
 const router = useRouter()
 const auth = useAuthStore()
 
-const validateForm = () => {
-  if (!email.value.includes('@')) {
-    error.value = '请输入有效的邮箱地址'
+const values: Record<FieldKey, typeof email> = { email, username, password, confirm: confirmPassword }
+
+// 校验规则与文案：与原实现一致（邮箱含 @、用户名 ≥3 且字母数字下划线、密码 ≥6、两次一致）
+const tests: Record<FieldKey, (v: string) => true | string> = {
+  email: (v) => v.includes('@') || '请输入有效的邮箱地址',
+  username: (v) => v.length < 3
+    ? '用户名至少需要3个字符'
+    : (/^[a-zA-Z0-9_]+$/.test(v) || '用户名只能包含字母、数字和下划线'),
+  password: (v) => v.length >= 6 || '密码至少需要6个字符',
+  confirm: (v) => v === password.value || '两次输入的密码不一致',
+}
+const okTexts: Partial<Record<FieldKey, string>> = { email: '邮箱格式正确', username: '用户名可用', confirm: '两次输入一致' }
+// 提交时空值字段按各自的首条规则提示
+const emptyTexts: Record<FieldKey, string> = {
+  email: '请输入有效的邮箱地址',
+  username: '用户名至少需要3个字符',
+  password: '密码至少需要6个字符',
+  confirm: '两次输入的密码不一致',
+}
+
+const fieldState = reactive<Record<FieldKey, { status: FieldStatus; msg: string }>>({
+  email: { status: '', msg: '' },
+  username: { status: '', msg: '' },
+  password: { status: '', msg: '' },
+  confirm: { status: '', msg: '' },
+})
+
+const fieldInputs = new Map<FieldKey, HTMLInputElement>()
+const setFieldInput = (key: FieldKey) => (el: unknown) => {
+  if (el instanceof HTMLInputElement) fieldInputs.set(key, el)
+}
+
+const setState = (key: FieldKey, status: FieldStatus, msg: string) => {
+  fieldState[key].status = status
+  fieldState[key].msg = msg
+}
+
+// blur 校验：空值不报错（留给提交时统一提示）
+const validateField = (key: FieldKey): boolean => {
+  const v = values[key].value.trim()
+  if (!v) {
+    setState(key, '', '')
     return false
   }
-  if (username.value.length < 3) {
-    error.value = '用户名至少需要3个字符'
-    return false
+  const r = tests[key](v)
+  if (r === true) {
+    setState(key, 'ok', okTexts[key] ?? '')
+    return true
   }
-  if (!/^[a-zA-Z0-9_]+$/.test(username.value)) {
-    error.value = '用户名只能包含字母、数字和下划线'
-    return false
+  setState(key, 'err', r)
+  return false
+}
+
+// 已出结果（对/错）的字段输入时实时复验
+const onFieldInput = (key: FieldKey) => {
+  if (fieldState[key].status !== '') validateField(key)
+}
+
+// 密码强度反馈（纯视觉提示，不改变校验规则）
+const LEVELS = ['', '弱 — 再加长一点', '一般 — 试试混入数字', '不错 — 再加符号更强', '很强']
+const pwdStrength = (v: string) => {
+  let score = 0
+  if (v.length >= 6) score++
+  if (v.length >= 10) score++
+  if (/\d/.test(v) && /[a-zA-Z]/.test(v)) score++
+  if (/[^a-zA-Z0-9]/.test(v)) score++
+  return Math.max(1, score)
+}
+
+// 密码输入：强度条 + hint（无错误时显示强度文案，出错时让位给错误）
+const onPasswordInput = () => {
+  if (fieldState.password.status !== '') validateField('password')
+  const v = password.value
+  if (!v) {
+    meterLevel.value = 0
+    if (fieldState.password.status !== 'err') setState('password', '', '')
+    return
   }
-  if (password.value.length < 6) {
-    error.value = '密码至少需要6个字符'
-    return false
+  meterLevel.value = pwdStrength(v)
+  if (fieldState.password.status !== 'err') setState('password', '', LEVELS[meterLevel.value])
+}
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value
+  fieldInputs.get('password')?.focus()
+}
+
+// 聚焦并弹簧提示首个问题字段
+const shakeAndFocus = (key: FieldKey) => {
+  const input = fieldInputs.get(key)
+  input?.focus()
+  const box = input?.closest('.field')
+  if (box) {
+    box.classList.remove('anim-shake')
+    void (box as HTMLElement).offsetWidth
+    box.classList.add('anim-shake')
   }
-  if (password.value !== confirmPassword.value) {
-    error.value = '两次输入的密码不一致'
-    return false
-  }
-  return true
 }
 
 const handleSubmit = async () => {
   error.value = ''
 
-  if (!validateForm()) return
+  let firstBad: FieldKey | null = null
+  for (const key of ['email', 'username', 'password', 'confirm'] as FieldKey[]) {
+    const v = values[key].value.trim()
+    const r = v ? tests[key](v) : emptyTexts[key]
+    if (r === true) {
+      setState(key, 'ok', okTexts[key] ?? '')
+    } else {
+      setState(key, 'err', r)
+      if (!firstBad) firstBad = key
+    }
+  }
+  if (firstBad) {
+    shakeAndFocus(firstBad)
+    return
+  }
 
   isLoading.value = true
   try {
@@ -58,171 +154,202 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-mesh flex items-center justify-center p-4 relative overflow-hidden">
-    <!-- 背景装饰 -->
-    <div class="orb orb-1" />
-    <div class="orb orb-2" />
-    <div class="orb orb-3" />
+  <AuthShell lede="注册一个账户，把每日情报、市场复盘和趁手工具收进同一个工作空间。">
+    <div class="auth-logo anim-rise d1">
+      <h1>创建账户</h1>
+      <p>开始你的探索之旅</p>
+    </div>
 
-    <!-- 注册卡片 -->
-    <div class="w-full max-w-md relative z-10">
-      <div class="glass-dark rounded-3xl p-8 shadow-2xl">
-        <!-- Logo & 标题 -->
-        <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-primary-600 mb-4 shadow-lg shadow-cyan-500/30">
-            <svg
-              class="w-8 h-8 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-              />
-            </svg>
-          </div>
-          <h1 class="text-3xl font-display font-bold text-white mb-2">
-            创建账户
-          </h1>
-          <p class="text-dark-300">
-            开始你的探索之旅
-          </p>
-        </div>
-
-        <!-- 表单 -->
-        <form
-          class="space-y-4"
-          @submit.prevent="handleSubmit"
+    <form
+      class="auth-form anim-rise d2"
+      novalidate
+      @submit.prevent="handleSubmit"
+    >
+      <div class="field">
+        <label
+          class="od-label"
+          for="email"
+        >邮箱</label>
+        <input
+          id="email"
+          :ref="setFieldInput('email')"
+          v-model="email"
+          type="email"
+          class="od-input"
+          :class="fieldState.email.status"
+          placeholder="your@email.com"
+          autocomplete="email"
+          @blur="validateField('email')"
+          @input="onFieldInput('email')"
         >
-          <div>
-            <label class="block text-sm font-medium text-dark-200 mb-2">
-              邮箱
-            </label>
-            <input
-              v-model="email"
-              type="email"
-              class="input-glass"
-              placeholder="your@email.com"
-              required
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-dark-200 mb-2">
-              用户名
-            </label>
-            <input
-              v-model="username"
-              type="text"
-              class="input-glass"
-              placeholder="3-20个字符，字母数字下划线"
-              required
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-dark-200 mb-2">
-              密码
-            </label>
-            <input
-              v-model="password"
-              type="password"
-              class="input-glass"
-              placeholder="至少6个字符"
-              required
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-dark-200 mb-2">
-              确认密码
-            </label>
-            <input
-              v-model="confirmPassword"
-              type="password"
-              class="input-glass"
-              placeholder="再次输入密码"
-              required
-            >
-          </div>
-
-          <div
-            v-if="error"
-            class="error-message"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            {{ error }}
-          </div>
-
-          <button
-            type="submit"
-            :disabled="isLoading"
-            class="btn-primary flex items-center justify-center gap-2 mt-6"
-          >
-            <template v-if="isLoading">
-              <svg
-                class="animate-spin h-5 w-5"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                  fill="none"
-                />
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              注册中...
-            </template>
-            <template v-else>
-              创建账户
-            </template>
-          </button>
-        </form>
-
-        <!-- 分割线 -->
-        <div class="flex items-center gap-4 my-6">
-          <div class="flex-1 h-px bg-white/10" />
-          <span class="text-dark-400 text-sm">或</span>
-          <div class="flex-1 h-px bg-white/10" />
-        </div>
-
-        <!-- 登录链接 -->
-        <p class="text-center text-dark-300">
-          已有账户？
-          <router-link
-            to="/login"
-            class="text-primary-400 hover:text-primary-300 font-medium transition-colors"
-          >
-            立即登录
-          </router-link>
+        <p
+          class="field-msg"
+          :class="fieldState.email.status"
+        >
+          <AppIcon
+            v-if="fieldState.email.status === 'err'"
+            name="alert-circle"
+            :size="13"
+          />
+          <AppIcon
+            v-else-if="fieldState.email.status === 'ok'"
+            name="check"
+            :size="13"
+          />
+          <span>{{ fieldState.email.msg }}</span>
         </p>
       </div>
 
-      <!-- 底部信息 -->
-      <p class="text-center text-dark-400 text-sm mt-6">
-        注册即表示同意我们的服务条款和隐私政策
-      </p>
+      <div class="field">
+        <label
+          class="od-label"
+          for="username"
+        >用户名</label>
+        <input
+          id="username"
+          :ref="setFieldInput('username')"
+          v-model="username"
+          type="text"
+          class="od-input"
+          :class="fieldState.username.status"
+          placeholder="3-20个字符，字母数字下划线"
+          autocomplete="username"
+          @blur="validateField('username')"
+          @input="onFieldInput('username')"
+        >
+        <p
+          class="field-msg"
+          :class="fieldState.username.status"
+        >
+          <AppIcon
+            v-if="fieldState.username.status === 'err'"
+            name="alert-circle"
+            :size="13"
+          />
+          <AppIcon
+            v-else-if="fieldState.username.status === 'ok'"
+            name="check"
+            :size="13"
+          />
+          <span>{{ fieldState.username.msg }}</span>
+        </p>
+      </div>
+
+      <div class="field">
+        <label
+          class="od-label"
+          for="password"
+        >密码</label>
+        <div class="pwd-wrap">
+          <input
+            id="password"
+            :ref="setFieldInput('password')"
+            v-model="password"
+            :type="showPassword ? 'text' : 'password'"
+            class="od-input"
+            :class="fieldState.password.status"
+            placeholder="至少6个字符"
+            autocomplete="new-password"
+            @blur="validateField('password')"
+            @input="onPasswordInput"
+          >
+          <button
+            type="button"
+            class="pwd-toggle"
+            :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+            @click="togglePassword"
+          >
+            <AppIcon
+              :name="showPassword ? 'eye-off' : 'eye'"
+              :size="17"
+            />
+          </button>
+        </div>
+        <div
+          class="pwd-meter"
+          :data-level="meterLevel"
+          aria-hidden="true"
+        >
+          <i /><i /><i /><i />
+        </div>
+        <p
+          class="field-msg"
+          :class="fieldState.password.status"
+        >
+          <AppIcon
+            v-if="fieldState.password.status === 'err'"
+            name="alert-circle"
+            :size="13"
+          />
+          <span>{{ fieldState.password.msg }}</span>
+        </p>
+      </div>
+
+      <div class="field">
+        <label
+          class="od-label"
+          for="confirm"
+        >确认密码</label>
+        <input
+          id="confirm"
+          :ref="setFieldInput('confirm')"
+          v-model="confirmPassword"
+          type="password"
+          class="od-input"
+          :class="fieldState.confirm.status"
+          placeholder="再次输入密码"
+          autocomplete="new-password"
+          @blur="validateField('confirm')"
+          @input="onFieldInput('confirm')"
+        >
+        <p
+          class="field-msg"
+          :class="fieldState.confirm.status"
+        >
+          <AppIcon
+            v-if="fieldState.confirm.status === 'err'"
+            name="alert-circle"
+            :size="13"
+          />
+          <AppIcon
+            v-else-if="fieldState.confirm.status === 'ok'"
+            name="check"
+            :size="13"
+          />
+          <span>{{ fieldState.confirm.msg }}</span>
+        </p>
+      </div>
+
+      <div
+        v-if="error"
+        class="od-error with-icon"
+      >
+        <AppIcon
+          name="alert-circle"
+          :size="16"
+        />
+        <span>{{ error }}</span>
+      </div>
+
+      <button
+        type="submit"
+        class="od-btn od-btn-primary od-btn-lg od-btn-block"
+        :disabled="isLoading"
+      >
+        {{ isLoading ? '注册中...' : '创建账户' }}
+      </button>
+    </form>
+
+    <div class="auth-divider anim-rise d3">
+      <span>或</span>
     </div>
-  </div>
+    <p class="auth-switch anim-rise d4">
+      已有账户？ <router-link to="/login">
+        立即登录
+      </router-link>
+    </p>
+    <p class="auth-foot anim-rise d5">
+      注册即表示同意我们的服务条款和隐私政策
+    </p>
+  </AuthShell>
 </template>
