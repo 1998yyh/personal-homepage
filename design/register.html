@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>注册（重设计） · Web Tools 设计稿</title>
+<script>try{const t=localStorage.getItem('zhe-theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<div class="auth-stage" data-od-id="register-page">
+  <a class="od-nav-link auth-back" href="home.html"><i data-icon="arrow-left" data-size="15"></i><span class="txt">返回首页</span></a>
+  <button class="od-icon-btn auth-theme-btn" data-theme-toggle aria-label="切换主题"></button>
+
+  <div class="od-card auth-shell" data-od-id="register-shell">
+    <!-- 左栏 · 品牌叙事 -->
+    <aside class="auth-brand" data-od-id="brand-panel">
+      <div class="auth-brand-top anim-rise">
+        <span class="brand-badge">哲</span>
+        <div>
+          <h2>把重复的事交给<span class="u">工具<svg viewBox="0 0 120 12" preserveAspectRatio="none"><path d="M2 8 Q 16 2, 32 7 T 62 7 T 92 6 T 118 7" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg></span>，<br>把思考留给自己。</h2>
+          <p class="lede" style="margin-top:14px">注册一个账户，把每日情报、市场复盘和趁手工具收进同一个工作空间。</p>
+        </div>
+      </div>
+
+      <ul class="auth-points anim-rise d2">
+        <li><i data-icon="bot" data-size="17"></i><div><b>每日 AI 情报早报</b><span>AI / Agent / Claude Code 精选，通勤路上读完</span></div></li>
+        <li><i data-icon="trending-up" data-size="17"></i><div><b>A股 / 港股市场复盘</b><span>收盘后十分钟，知道今天该知道的事</span></div></li>
+        <li><i data-icon="shield" data-size="17"></i><div><b>数据自有，匿名可访问</b><span>全站免登录可用，账户只用于个性化</span></div></li>
+      </ul>
+
+      <div class="auth-brand-foot anim-rise d3">终身学习 · 长期主义</div>
+    </aside>
+
+    <!-- 右栏 · 注册表单 -->
+    <div class="auth-panel" data-od-id="register-panel">
+      <div class="auth-logo anim-rise d1">
+        <h1>创建账户</h1>
+        <p>开始你的探索之旅</p>
+      </div>
+
+      <form class="auth-form anim-rise d2" id="register-form" novalidate>
+        <div class="field" data-field="email">
+          <label class="od-label" for="email">邮箱</label>
+          <input id="email" type="email" class="od-input" placeholder="your@email.com" autocomplete="email">
+          <p class="field-msg" id="msg-email"></p>
+        </div>
+        <div class="field" data-field="username">
+          <label class="od-label" for="username">用户名</label>
+          <input id="username" type="text" class="od-input" placeholder="3-20个字符，字母数字下划线" autocomplete="username">
+          <p class="field-msg" id="msg-username"></p>
+        </div>
+        <div class="field" data-field="password">
+          <label class="od-label" for="password">密码</label>
+          <div class="pwd-wrap">
+            <input id="password" type="password" class="od-input" placeholder="至少6个字符" autocomplete="new-password">
+            <button type="button" class="pwd-toggle" id="pwd-toggle" aria-label="显示密码"></button>
+          </div>
+          <div class="pwd-meter" id="pwd-meter" data-level="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <p class="field-msg" id="msg-password"></p>
+        </div>
+        <div class="field" data-field="confirm">
+          <label class="od-label" for="confirm">确认密码</label>
+          <input id="confirm" type="password" class="od-input" placeholder="再次输入密码" autocomplete="new-password">
+          <p class="field-msg" id="msg-confirm"></p>
+        </div>
+        <div class="od-error with-icon" id="form-error" style="display:none"></div>
+        <button type="submit" class="od-btn od-btn-primary od-btn-lg od-btn-block" id="submit-btn" data-od-id="register-submit">创建账户</button>
+      </form>
+
+      <div class="auth-divider anim-rise d3"><span>或</span></div>
+      <p class="auth-switch anim-rise d4">已有账户？ <a href="login.html">立即登录</a></p>
+      <p class="auth-foot anim-rise d5">注册即表示同意我们的服务条款和隐私政策</p>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+/* ---------- 密码可见性切换 ---------- */
+const pwdInput = document.getElementById('password');
+const pwdToggle = document.getElementById('pwd-toggle');
+function syncToggleIcon() {
+  const show = pwdInput.type === 'text';
+  pwdToggle.innerHTML = odSvg(show ? 'eye-off' : 'eye', 17);
+  pwdToggle.setAttribute('aria-label', show ? '隐藏密码' : '显示密码');
+}
+pwdToggle.addEventListener('click', () => {
+  pwdInput.type = pwdInput.type === 'password' ? 'text' : 'password';
+  syncToggleIcon(); pwdInput.focus();
+});
+syncToggleIcon();
+
+/* ---------- 密码强度反馈（纯视觉提示，不改变校验规则） ---------- */
+const meter = document.getElementById('pwd-meter');
+const pwdMsg = document.getElementById('msg-password');
+const LEVELS = ['', '弱 — 再加长一点', '一般 — 试试混入数字', '不错 — 再加符号更强', '很强'];
+function pwdStrength(v) {
+  let score = 0;
+  if (v.length >= 6) score++;
+  if (v.length >= 10) score++;
+  if (/\d/.test(v) && /[a-zA-Z]/.test(v)) score++;
+  if (/[^a-zA-Z0-9]/.test(v)) score++;
+  return Math.max(1, score);
+}
+
+/* ---------- 字段级校验（规则与文案和 src/pages/RegisterPage.vue 完全一致） ---------- */
+const FIELDS = {
+  email:    { el: document.getElementById('email'),    msg: document.getElementById('msg-email'),
+              test: (v) => v.includes('@') || '请输入有效的邮箱地址', ok: '邮箱格式正确' },
+  username: { el: document.getElementById('username'), msg: document.getElementById('msg-username'),
+              test: (v) => v.length < 3 ? '用户名至少需要3个字符'
+                          : (/^[a-zA-Z0-9_]+$/.test(v) ? true : '用户名只能包含字母、数字和下划线'), ok: '用户名可用' },
+  password: { el: pwdInput, msg: pwdMsg,
+              test: (v) => v.length >= 6 || '密码至少需要6个字符' },
+  confirm:  { el: document.getElementById('confirm'),  msg: document.getElementById('msg-confirm'),
+              test: (v) => v === pwdInput.value || '两次输入的密码不一致', ok: '两次输入一致' },
+};
+
+function setState(key, state, text) {
+  const f = FIELDS[key];
+  f.el.classList.remove('err', 'ok');
+  f.msg.classList.remove('err', 'ok');
+  if (state) { f.el.classList.add(state); f.msg.classList.add(state); }
+  f.msg.innerHTML = text
+    ? `${state === 'err' ? odSvg('alert-circle', 13) : state === 'ok' ? odSvg('check', 13) : ''}<span>${text}</span>`
+    : '';
+}
+
+function validateField(key, { quiet = false } = {}) {
+  const f = FIELDS[key];
+  const v = f.el.value.trim();
+  if (!v) { setState(key, '', ''); return quiet; }   /* 空值不在 blur 时报错，留给提交 */
+  const r = f.test(v);
+  if (r === true) { setState(key, 'ok', f.ok || ''); return true; }
+  setState(key, 'err', r); return false;
+}
+
+/* blur 校验 + 出错后 input 实时复验 */
+Object.keys(FIELDS).forEach((key) => {
+  const f = FIELDS[key];
+  f.el.addEventListener('blur', () => validateField(key));
+  f.el.addEventListener('input', () => {
+    if (f.el.classList.contains('err') || f.el.classList.contains('ok')) validateField(key);
+  });
+});
+
+/* 密码输入：强度条 + hint（无错误时显示强度文案，出错时让位给错误） */
+pwdInput.addEventListener('input', () => {
+  const v = pwdInput.value;
+  if (!v) { meter.dataset.level = 0; if (!pwdInput.classList.contains('err')) setState('password', '', ''); return; }
+  const lv = pwdStrength(v);
+  meter.dataset.level = lv;
+  if (!pwdInput.classList.contains('err')) setState('password', '', LEVELS[lv]);
+});
+
+/* ---------- 提交：全量校验，聚焦并弹簧提示首个问题字段 ---------- */
+const form = document.getElementById('register-form');
+const errEl = document.getElementById('form-error');
+const btn = document.getElementById('submit-btn');
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  errEl.style.display = 'none';
+
+  let firstBad = null;
+  Object.keys(FIELDS).forEach((key) => {
+    const f = FIELDS[key];
+    const v = f.el.value.trim();
+    const r = v ? f.test(v) : ({ email: '请输入有效的邮箱地址', username: '用户名至少需要3个字符',
+                                 password: '密码至少需要6个字符', confirm: '两次输入的密码不一致' })[key];
+    if (r === true) setState(key, 'ok', FIELDS[key].ok || '');
+    else { setState(key, 'err', r); if (!firstBad) firstBad = f.el; }
+  });
+
+  if (firstBad) {
+    firstBad.focus();
+    const box = firstBad.closest('.field');
+    box.classList.remove('anim-shake'); void box.offsetWidth; box.classList.add('anim-shake');
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = '注册中...';
+  setTimeout(() => {
+    btn.disabled = false; btn.textContent = '创建账户';
+    errEl.innerHTML = `${odSvg('alert-circle', 16)}<span>演示环境：此处将调用 /api/auth/register，成功后自动登录并回首页</span>`;
+    errEl.style.display = '';
+  }, 900);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "kind": "critique-panel",
+  "score": 5,
+  "axes": {
+    "clarity": { "score": 5, "notes": "对话页三态（空态/流式/完成）各自明确：流式有闪烁光标 + 停止按钮换形，完成态 hover 才露操作；管理页启停开关即时置灰整张卡片，状态一眼可读" },
+    "hierarchy": { "score": 5, "notes": "会话列表 今天/昨天/过去7天 分组 + active 左侧 accent 指示条；消息流用户右气泡 / 助手左富文本非对称对齐，760px 阅读栏宽与日报页一致" },
+    "typography": { "score": 4, "notes": "端点与代码块走 mono 体系，inline code 与 pre code 分层（pre 内不再继承 accent-soft 底色）；消息 14px/1.7 行高长读舒适" },
+    "motion": { "score": 5, "notes": "流式逐段打字（24ms/3字符）+ 光标呼吸；抽屉 240ms 弹簧曲线滑入，开关/skills chips 微过渡；reduced-motion 全部回退静态" },
+    "brand": { "score": 5, "notes": "accent 预算守住：对话页仅「新对话 + 发送键」，管理页仅「新建 + 保存」；字段校验/shake/pwd-toggle 全套复用注册页模式，令牌零新增" }
+  }
+}

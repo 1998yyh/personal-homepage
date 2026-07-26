@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>开发工具箱 · Web Tools 设计稿</title>
+<script>try{const t=localStorage.getItem('zhe-theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<nav class="topnav" data-od-id="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="home.html">
+      <span class="brand-badge">哲</span>
+      <span class="brand-name">Web Tools</span>
+    </a>
+    <div class="nav-links">
+      <a class="od-nav-link" href="ai-reports.html">AI资讯</a>
+      <a class="od-nav-link" href="stock-reports.html">股票资讯</a>
+      <a class="od-nav-link active" href="devtools.html">开发工具</a>
+      <a class="od-nav-link" href="agent-chat.html">Agent</a>
+    </div>
+    <button class="od-icon-btn" data-theme-toggle aria-label="切换主题"></button>
+    <a class="od-nav-link" href="login.html">登录</a>
+  </div>
+</nav>
+
+<main class="container-wide page-main" data-od-id="devtools">
+  <div>
+    <p class="eyebrow">Dev Tools</p>
+    <h2 class="page-title">开发工具箱</h2>
+    <p class="page-desc">编码解码 / 格式化 / 转换 / 生成，日常顺手的小工具都在这。</p>
+  </div>
+
+  <div class="split">
+    <!-- 左侧：工具列表 -->
+    <div class="od-card split-side" data-od-id="tool-list">
+      <div style="padding:12px;border-bottom:1px solid var(--border)">
+        <input type="text" id="tool-search" class="od-input" style="padding:8px 12px;font-size:13.5px" placeholder="搜索工具...">
+      </div>
+      <div class="split-side-body" id="tool-list"></div>
+    </div>
+
+    <!-- 右侧：工具工作区 -->
+    <div class="od-card split-main" data-od-id="tool-workspace">
+      <div class="tool-head">
+        <span class="icon-tile sm grad-soft" id="tool-icon"></span>
+        <h2 id="tool-name"></h2>
+      </div>
+      <div class="tool-body">
+        <div class="tool-form">
+          <div id="tool-custom"></div>
+          <div id="tool-input-wrap">
+            <label class="od-label" for="tool-input">输入</label>
+            <textarea id="tool-input" class="od-input h-32" placeholder="输入内容..."></textarea>
+          </div>
+          <div class="tool-actions" id="tool-actions"></div>
+          <div class="od-error" id="tool-error" style="display:none"></div>
+          <div>
+            <label class="od-label" for="tool-output">输出</label>
+            <textarea id="tool-output" class="od-input h-48" readonly></textarea>
+            <span class="copied-tip" id="copy-tip"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="shared.js"></script>
+<script>
+/* ---------- 工具定义（逻辑与线上 tools/ 下各 SFC 等价） ---------- */
+const utf8 = {
+  enc: (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))),
+  dec: (s) => new TextDecoder().decode(Uint8Array.from(atob(s.trim()), (c) => c.charCodeAt(0))),
+};
+
+const TOOLS = [
+  { id: 'base64', name: 'Base64', icon: 'binary', category: '编码/解码', buttons: [
+    ['编码', (v) => utf8.enc(v)],
+    ['解码', (v) => utf8.dec(v)],
+  ]},
+  { id: 'url', name: 'URL 编码', icon: 'link', category: '编码/解码', buttons: [
+    ['编码', (v) => encodeURIComponent(v)],
+    ['解码', (v) => decodeURIComponent(v)],
+  ]},
+  { id: 'html-entity', name: 'HTML 实体', icon: 'code', category: '编码/解码', buttons: [
+    ['转义', (v) => v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')],
+    ['反转义', (v) => { const t = document.createElement('textarea'); t.innerHTML = v; return t.value; }],
+  ]},
+  { id: 'unicode', name: 'Unicode', icon: 'globe', category: '编码/解码', buttons: [
+    ['转 Unicode', (v) => [...v].map((c) => '\\u' + c.codePointAt(0).toString(16).padStart(4, '0')).join('')],
+    ['还原', (v) => v.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))],
+  ]},
+  { id: 'json', name: 'JSON 格式化', icon: 'braces', category: '格式化', buttons: [
+    ['格式化', (v) => JSON.stringify(JSON.parse(v), null, 2)],
+    ['压缩', (v) => JSON.stringify(JSON.parse(v))],
+  ]},
+  { id: 'timestamp', name: '时间戳转换', icon: 'clock', category: '转换', buttons: [
+    ['时间戳 → 日期', (v) => { const n = Number(v.trim()); if (!Number.isFinite(n)) throw new Error('请输入数字时间戳'); const ms = v.trim().length <= 10 ? n * 1000 : n; return new Date(ms).toLocaleString('zh-CN', { hour12: false }); }],
+    ['日期 → 时间戳', (v) => { const t = new Date(v.trim().replace(/-/g, '/')); if (isNaN(t)) throw new Error('无法识别的日期格式'); return String(Math.floor(t.getTime() / 1000)); }],
+    ['当前时间戳', () => String(Math.floor(Date.now() / 1000))],
+  ]},
+  { id: 'color', name: '颜色转换', icon: 'palette', category: '转换', buttons: [
+    ['转换', (v) => v],
+  ], custom: 'color' },
+  { id: 'number-base', name: '进制转换', icon: 'hash', category: '转换', buttons: [
+    ['十 → 二 / 八 / 十六', (v) => { const n = Number(v.trim()); if (!Number.isFinite(n)) throw new Error('请输入十进制数字'); return `二进制  ${n.toString(2)}\n八进制  ${n.toString(8)}\n十六进制  ${n.toString(16).toUpperCase()}`; }],
+    ['二 / 八 / 十六 → 十', (v) => { const s = v.trim(); const n = /^0b/i.test(s) ? parseInt(s.slice(2), 2) : /^0o/i.test(s) ? parseInt(s.slice(2), 8) : /^0x/i.test(s) ? parseInt(s, 16) : /^[01]+$/.test(s) ? parseInt(s, 2) : NaN; if (!Number.isFinite(n)) throw new Error('支持 0b / 0o / 0x 前缀，或纯二进制'); return String(n); }],
+  ]},
+  { id: 'uuid', name: 'UUID 生成', icon: 'key', category: '生成', buttons: [
+    ['生成 1 个', () => crypto.randomUUID()],
+    ['生成 5 个', () => Array.from({ length: 5 }, () => crypto.randomUUID()).join('\n')],
+  ], noInput: true },
+  { id: 'password', name: '随机密码', icon: 'lock', category: '生成', buttons: [
+    ['16 位', () => genPwd(16)],
+    ['24 位', () => genPwd(24)],
+    ['32 位', () => genPwd(32)],
+  ], noInput: true },
+  { id: 'hash', name: 'Hash 计算', icon: 'shield-check', category: '生成', buttons: [
+    ['SHA-256', async (v) => await digest('SHA-256', v)],
+    ['SHA-1', async (v) => await digest('SHA-1', v)],
+    ['SHA-512', async (v) => await digest('SHA-512', v)],
+  ]},
+];
+
+function genPwd(len) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
+  const arr = new Uint32Array(len); crypto.getRandomValues(arr);
+  return [...arr].map((n) => chars[n % chars.length]).join('');
+}
+async function digest(algo, text) {
+  const buf = await crypto.subtle.digest(algo, new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+function parseColor(v) {
+  const s = v.trim();
+  let m = s.match(/^#?([0-9a-f]{6})$/i) || s.match(/^#?([0-9a-f]{3})$/i);
+  if (m) {
+    let h = m[1]; if (h.length === 3) h = [...h].map((c) => c + c).join('');
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+  m = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (m) return [+m[1], +m[2], +m[3]];
+  throw new Error('支持 #RRGGBB 或 rgb(r, g, b) 格式');
+}
+function rgbToHsl(r, g, b) {
+  r/=255; g/=255; b/=255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b), l = (max+min)/2;
+  if (max === min) return [0, 0, l];
+  const d = max-min, s = l > .5 ? d/(2-max-min) : d/(max+min);
+  let h = max===r ? (g-b)/d + (g<b?6:0) : max===g ? (b-r)/d+2 : (r-g)/d+4;
+  return [h*60, s, l];
+}
+
+/* ---------- 渲染 ---------- */
+const CATS = [...new Set(TOOLS.map((t) => t.category))];
+const listEl = document.getElementById('tool-list');
+const searchEl = document.getElementById('tool-search');
+const inputWrap = document.getElementById('tool-input-wrap');
+const inputEl = document.getElementById('tool-input');
+const outputEl = document.getElementById('tool-output');
+const errorEl = document.getElementById('tool-error');
+const actionsEl = document.getElementById('tool-actions');
+const customEl = document.getElementById('tool-custom');
+const copyTip = document.getElementById('copy-tip');
+let current = null;
+
+function renderList(filter) {
+  const q = (filter || '').toLowerCase();
+  listEl.innerHTML = CATS.map((cat) => {
+    const items = TOOLS.filter((t) => t.category === cat && t.name.toLowerCase().includes(q));
+    if (!items.length) return '';
+    return `<div class="tool-cat"><h3>${cat}</h3>${items.map((t) => `
+      <button class="od-item tool-item ${current && current.id === t.id ? 'active' : ''}" data-id="${t.id}">
+        ${odSvg(t.icon, 15)}<span>${t.name}</span>
+      </button>`).join('')}</div>`;
+  }).join('');
+  listEl.querySelectorAll('.tool-item').forEach((btn) => btn.addEventListener('click', () => selectTool(btn.dataset.id)));
+}
+
+function selectTool(id) {
+  current = TOOLS.find((t) => t.id === id) || TOOLS[0];
+  history.replaceState(null, '', '#' + current.id);
+  document.getElementById('tool-icon').innerHTML = odSvg(current.icon, 16);
+  document.getElementById('tool-name').textContent = current.name;
+  inputWrap.style.display = current.noInput ? 'none' : '';
+  customEl.innerHTML = '';
+  outputEl.value = ''; errorEl.style.display = 'none';
+  if (current.custom === 'color') {
+    customEl.innerHTML = `<div class="color-preview"><span class="color-swatch-lg" id="color-swatch"></span><dl class="kv" id="color-kv"></dl></div>`;
+    customEl.style.display = 'none';
+  }
+  actionsEl.innerHTML = current.buttons.map(([label], i) =>
+    `<button class="od-btn od-btn-soft" data-i="${i}">${label}</button>`).join('') +
+    `<button class="od-btn od-btn-primary" id="btn-copy" disabled>复制结果</button>
+     <button class="od-btn od-btn-ghost" id="btn-clear">清空</button>`;
+  actionsEl.querySelectorAll('[data-i]').forEach((btn) => btn.addEventListener('click', () => run(+btn.dataset.i)));
+  document.getElementById('btn-copy').addEventListener('click', () => odCopy(outputEl.value, copyTip));
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    inputEl.value = ''; outputEl.value = ''; errorEl.style.display = 'none';
+    customEl.style.display = 'none'; document.getElementById('btn-copy').disabled = true;
+  });
+  renderList(searchEl.value);
+}
+
+async function run(i) {
+  errorEl.style.display = 'none';
+  try {
+    const [, fn] = current.buttons[i];
+    const result = await fn(inputEl.value);
+    if (current.custom === 'color') return showColor(result);
+    outputEl.value = result;
+    document.getElementById('btn-copy').disabled = !result;
+  } catch (err) {
+    outputEl.value = '';
+    document.getElementById('btn-copy').disabled = true;
+    errorEl.textContent = err.message || '处理失败，请检查输入格式';
+    errorEl.style.display = '';
+  }
+}
+
+function showColor(v) {
+  const [r, g, b] = parseColor(v);
+  const hex = '#' + [r,g,b].map((x) => x.toString(16).padStart(2,'0')).join('').toUpperCase();
+  const [h, s, l] = rgbToHsl(r, g, b);
+  customEl.style.display = '';
+  document.getElementById('color-swatch').style.background = hex;
+  document.getElementById('color-kv').innerHTML = `
+    <dt>HEX</dt><dd>${hex}</dd>
+    <dt>RGB</dt><dd>rgb(${r}, ${g}, ${b})</dd>
+    <dt>HSL</dt><dd>hsl(${Math.round(h)}, ${Math.round(s*100)}%, ${Math.round(l*100)}%)</dd>`;
+  outputEl.value = `${hex}\nrgb(${r}, ${g}, ${b})\nhsl(${Math.round(h)}, ${Math.round(s*100)}%, ${Math.round(l*100)}%)`;
+  document.getElementById('btn-copy').disabled = false;
+}
+
+searchEl.addEventListener('input', () => renderList(searchEl.value));
+selectTool(location.hash.slice(1) || 'base64');
+</script>
+</body>
+</html>

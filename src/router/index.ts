@@ -17,15 +17,12 @@ const router = createRouter({
   ],
 })
 
-// 全局前置守卫：首次导航拉取用户资料，未登录跳 /login 并带 redirect
-router.beforeEach(async (to) => {
-  if (to.meta.public) return true
+// 全局前置守卫：首次导航尝试拉取用户资料（有 token 才发请求），
+// 不再强制登录——所有页面公开访问，登录仅用于展示用户信息
+router.beforeEach(async () => {
   const auth = useAuthStore()
   if (auth.isLoading) {
     await auth.fetchProfile()
-  }
-  if (!auth.isAuthenticated) {
-    return { path: '/login', query: { redirect: to.fullPath } }
   }
   return true
 })

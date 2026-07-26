@@ -30,16 +30,16 @@ const copyHash = (hash: string) => {
 <template>
   <div class="space-y-6">
     <div>
-      <label class="block text-white/60 text-sm mb-2">输入文本</label>
+      <label class="od-label">输入文本</label>
       <textarea
         v-model="input"
         placeholder="输入要计算 Hash 的文本..."
-        class="w-full h-32 px-3 py-2 bg-white/5 rounded-lg text-white font-mono border border-white/10 resize-none"
+        class="od-input h-32 font-mono !text-[13px] resize-none"
       />
     </div>
 
     <button
-      class="px-6 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30"
+      class="od-btn od-btn-primary"
       @click="calculate"
     >
       计算 Hash
@@ -52,20 +52,20 @@ const copyHash = (hash: string) => {
       <div
         v-for="(hash, alg) in hashes"
         :key="alg"
-        class="bg-white/5 rounded-lg p-4"
+        class="od-panel p-4"
       >
         <div class="flex items-center justify-between mb-2">
-          <p class="text-white/40 text-sm">
+          <p class="text-muted text-sm">
             {{ alg }}
           </p>
           <button
-            class="text-white/40 hover:text-white text-xs"
+            class="text-muted hover:text-fg text-xs transition-colors cursor-pointer"
             @click="copyHash(hash)"
           >
             复制
           </button>
         </div>
-        <p class="text-white font-mono text-xs break-all">
+        <p class="text-fg font-mono text-xs break-all">
           {{ hash }}
         </p>
       </div>

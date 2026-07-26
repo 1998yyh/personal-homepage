@@ -30,35 +30,37 @@ watch(
 </script>
 
 <template>
-  <div class="min-h-screen bg-mesh relative overflow-hidden">
-    <!-- 背景装饰 - 股票主题色 -->
-    <div
-      class="orb orb-1"
-      :style="{ background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)' }"
-    />
-    <div
-      class="orb orb-2"
-      :style="{ background: 'radial-gradient(circle, rgba(5, 150, 105, 0.1) 0%, transparent 70%)' }"
-    />
-    <div
-      class="orb orb-3"
-      :style="{ background: 'radial-gradient(circle, rgba(34, 197, 94, 0.08) 0%, transparent 70%)' }"
-    />
-
+  <div class="min-h-screen">
     <!-- 导航栏 -->
     <Navbar />
 
     <!-- 主内容 -->
-    <main class="relative z-10 max-w-7xl mx-auto px-4 py-4">
-      <div class="flex gap-6 h-[calc(100vh-88px)]">
+    <main class="max-w-7xl mx-auto px-6 py-10">
+      <!-- 页头（投资板块用领域点缀色 domain） -->
+      <div class="mb-8">
+        <p
+          class="eyebrow"
+          style="color: var(--domain)"
+        >
+          Market Daily
+        </p>
+        <h2 class="font-display text-[clamp(1.7rem,3.2vw,2.3rem)] font-bold tracking-[-0.02em] leading-[1.2] mb-2">
+          股票资讯日报
+        </h2>
+        <p class="text-muted max-w-[60ch]">
+          A股 / 港股 每日市场精选，复盘纪律从每天十分钟开始。
+        </p>
+      </div>
+
+      <div class="flex gap-6 h-[calc(100vh-320px)] min-h-[480px]">
         <!-- 左侧：日报列表 -->
-        <div class="w-56 flex-shrink-0 glass-dark rounded-xl overflow-hidden">
-          <div class="px-4 py-3 border-b border-white/[0.06]">
-            <h3 class="text-white/50 text-xs font-medium uppercase tracking-wider">
+        <div class="w-56 flex-shrink-0 od-card overflow-hidden flex flex-col">
+          <div class="px-4 py-3 border-b border-border">
+            <h3 class="text-muted text-xs font-medium uppercase tracking-wider">
               历史日报
             </h3>
           </div>
-          <div class="p-2 h-[calc(100%-48px)]">
+          <div class="p-2 flex-1 overflow-hidden">
             <ReportList
               :reports="reportsData?.items || []"
               :selected-report="selectedReport"
@@ -69,7 +71,7 @@ watch(
         </div>
 
         <!-- 右侧：日报内容 -->
-        <div class="flex-1 glass-dark rounded-xl overflow-hidden">
+        <div class="flex-1 od-card overflow-hidden">
           <ReportContent
             :report="selectedReport"
             :is-loading="isLoading"

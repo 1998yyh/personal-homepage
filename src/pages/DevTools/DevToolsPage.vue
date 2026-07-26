@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { Component } from 'vue'
 import Navbar from '../../components/Navbar.vue'
+import AppIcon from '../../components/AppIcon.vue'
 import Base64Tool from './tools/Base64Tool.vue'
 import UrlTool from './tools/UrlTool.vue'
 import HtmlEntityTool from './tools/HtmlEntityTool.vue'
@@ -23,20 +24,20 @@ interface Tool {
 
 const tools: Tool[] = [
   // 编码/解码
-  { id: 'base64', name: 'Base64', icon: '🔤', category: '编码/解码' },
-  { id: 'url', name: 'URL 编码', icon: '🔗', category: '编码/解码' },
-  { id: 'html-entity', name: 'HTML 实体', icon: '📄', category: '编码/解码' },
-  { id: 'unicode', name: 'Unicode', icon: '🌐', category: '编码/解码' },
+  { id: 'base64', name: 'Base64', icon: 'binary', category: '编码/解码' },
+  { id: 'url', name: 'URL 编码', icon: 'link', category: '编码/解码' },
+  { id: 'html-entity', name: 'HTML 实体', icon: 'code', category: '编码/解码' },
+  { id: 'unicode', name: 'Unicode', icon: 'globe', category: '编码/解码' },
   // 格式化
-  { id: 'json', name: 'JSON 格式化', icon: '📋', category: '格式化' },
+  { id: 'json', name: 'JSON 格式化', icon: 'braces', category: '格式化' },
   // 转换
-  { id: 'timestamp', name: '时间戳转换', icon: '⏰', category: '转换' },
-  { id: 'color', name: '颜色转换', icon: '🎨', category: '转换' },
-  { id: 'number-base', name: '进制转换', icon: '🔢', category: '转换' },
+  { id: 'timestamp', name: '时间戳转换', icon: 'clock', category: '转换' },
+  { id: 'color', name: '颜色转换', icon: 'palette', category: '转换' },
+  { id: 'number-base', name: '进制转换', icon: 'hash', category: '转换' },
   // 生成
-  { id: 'uuid', name: 'UUID 生成', icon: '🔑', category: '生成' },
-  { id: 'password', name: '随机密码', icon: '🔐', category: '生成' },
-  { id: 'hash', name: 'Hash 计算', icon: '✔️', category: '生成' },
+  { id: 'uuid', name: 'UUID 生成', icon: 'key', category: '生成' },
+  { id: 'password', name: '随机密码', icon: 'lock', category: '生成' },
+  { id: 'hash', name: 'Hash 计算', icon: 'shield-check', category: '生成' },
 ]
 
 const categories = [...new Set(tools.map(t => t.category))]
@@ -66,29 +67,37 @@ const toolsOfCategory = (category: string) => filteredTools.value.filter(t => t.
 </script>
 
 <template>
-  <div class="min-h-screen bg-mesh relative overflow-hidden">
-    <!-- 背景装饰 -->
-    <div class="orb orb-1" />
-    <div class="orb orb-2" />
-    <div class="orb orb-3" />
-
+  <div class="min-h-screen">
     <!-- 导航栏 -->
     <Navbar />
 
     <!-- 主内容 -->
-    <main class="relative z-10 max-w-7xl mx-auto px-4 py-4">
-      <div class="flex gap-4 h-[calc(100vh-88px)]">
+    <main class="max-w-7xl mx-auto px-6 py-10">
+      <!-- 页头 -->
+      <div class="mb-8">
+        <p class="eyebrow">
+          Dev Tools
+        </p>
+        <h2 class="font-display text-[clamp(1.7rem,3.2vw,2.3rem)] font-bold tracking-[-0.02em] leading-[1.2] mb-2">
+          开发工具箱
+        </h2>
+        <p class="text-muted max-w-[60ch]">
+          编码解码 / 格式化 / 转换 / 生成，日常顺手的小工具都在这。
+        </p>
+      </div>
+
+      <div class="flex gap-6 h-[calc(100vh-320px)] min-h-[480px]">
         <!-- 左侧：工具列表 -->
-        <div class="w-56 flex-shrink-0 glass-dark rounded-xl overflow-hidden">
-          <div class="px-3 py-3 border-b border-white/[0.06]">
+        <div class="w-56 flex-shrink-0 od-card overflow-hidden flex flex-col">
+          <div class="p-3 border-b border-border">
             <input
               v-model="searchQuery"
               type="text"
               placeholder="搜索工具..."
-              class="w-full px-3 py-2 bg-white/5 rounded-lg text-sm text-white placeholder-white/30 border border-transparent focus:border-white/10 focus:outline-none"
+              class="od-input !py-2 !text-sm"
             >
           </div>
-          <div class="p-2 h-[calc(100%-60px)] overflow-y-auto">
+          <div class="p-2 flex-1 overflow-y-auto">
             <template
               v-for="category in categories"
               :key="category"
@@ -97,21 +106,26 @@ const toolsOfCategory = (category: string) => filteredTools.value.filter(t => t.
                 v-if="toolsOfCategory(category).length > 0"
                 class="mb-3"
               >
-                <h3 class="text-white/30 text-xs font-medium px-2 mb-1">
+                <h3 class="text-muted text-xs font-medium px-2 mb-1">
                   {{ category }}
                 </h3>
                 <button
                   v-for="tool in toolsOfCategory(category)"
                   :key="tool.id"
-                  class="w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2"
-                  :class="
+                  class="od-item w-full text-left px-3 py-2 flex items-center gap-2.5 cursor-pointer"
+                  :class="[
                     selectedTool.id === tool.id
-                      ? 'bg-white/10 text-white'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                  "
+                      ? 'active text-fg'
+                      : 'text-fg/70 hover:text-fg',
+                  ]"
                   @click="selectedTool = tool"
                 >
-                  <span>{{ tool.icon }}</span>
+                  <AppIcon
+                    :name="tool.icon"
+                    :size="15"
+                    class="shrink-0"
+                    :class="selectedTool.id === tool.id ? 'text-accent-strong' : 'text-muted'"
+                  />
                   <span class="text-sm">{{ tool.name }}</span>
                 </button>
               </div>
@@ -120,14 +134,19 @@ const toolsOfCategory = (category: string) => filteredTools.value.filter(t => t.
         </div>
 
         <!-- 右侧：工具工作区 -->
-        <div class="flex-1 glass-dark rounded-xl overflow-hidden">
-          <div class="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
-            <span class="text-xl">{{ selectedTool.icon }}</span>
-            <h2 class="text-lg font-medium text-white">
+        <div class="flex-1 od-card overflow-hidden flex flex-col">
+          <div class="px-6 py-4 border-b border-border flex items-center gap-3">
+            <span class="w-8 h-8 rounded-[10px] grid place-items-center bg-accent-soft text-accent-strong">
+              <AppIcon
+                :name="selectedTool.icon"
+                :size="16"
+              />
+            </span>
+            <h2 class="text-lg font-display font-bold tracking-[-0.01em] text-fg">
               {{ selectedTool.name }}
             </h2>
           </div>
-          <div class="p-6 h-[calc(100%-60px)] overflow-y-auto">
+          <div class="p-6 flex-1 overflow-y-auto">
             <component :is="toolComponents[selectedTool.id]" />
           </div>
         </div>

@@ -46,9 +46,9 @@ const getStrength = (pwd: string) => {
   if (/[0-9]/.test(pwd)) score++
   if (/[^a-zA-Z0-9]/.test(pwd)) score++
 
-  if (score <= 3) return { label: '弱', color: 'text-red-400' }
-  if (score <= 5) return { label: '中', color: 'text-yellow-400' }
-  return { label: '强', color: 'text-green-400' }
+  if (score <= 3) return { label: '弱', color: 'text-danger' }
+  if (score <= 5) return { label: '中', color: 'text-warn' }
+  return { label: '强', color: 'text-success' }
 }
 
 const copyPassword = () => {
@@ -67,16 +67,16 @@ const onLengthInput = (e: Event) => {
 <template>
   <div class="space-y-6">
     <div class="flex items-center gap-4">
-      <label class="text-white/60 w-20">长度:</label>
+      <label class="text-muted text-sm w-20">长度:</label>
       <input
         type="range"
         :value="length"
         min="4"
         max="64"
-        class="flex-1"
+        class="flex-1 accent-accent"
         @input="onLengthInput"
       >
-      <span class="text-white w-8">{{ length }}</span>
+      <span class="text-fg w-8 tabular-nums">{{ length }}</span>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
@@ -88,15 +88,15 @@ const onLengthInput = (e: Event) => {
         <input
           type="checkbox"
           :checked="options[key]"
-          class="w-4 h-4"
+          class="w-4 h-4 accent-accent"
           @change="toggleOption(key, $event)"
         >
-        <span class="text-white/70 text-sm">{{ label }}</span>
+        <span class="text-fg/80 text-sm">{{ label }}</span>
       </label>
     </div>
 
     <button
-      class="w-full py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-medium"
+      class="od-btn od-btn-primary w-full"
       @click="generate"
     >
       生成密码
@@ -104,12 +104,12 @@ const onLengthInput = (e: Event) => {
 
     <div
       v-if="password"
-      class="bg-white/5 rounded-lg p-4"
+      class="od-panel p-4"
     >
-      <div class="flex items-center justify-between mb-2">
-        <code class="text-white font-mono text-lg break-all">{{ password }}</code>
+      <div class="flex items-center justify-between gap-4 mb-2">
+        <code class="text-fg font-mono text-lg break-all">{{ password }}</code>
         <button
-          class="px-3 py-1 bg-white/10 text-white rounded hover:bg-white/20 text-sm"
+          class="od-btn od-btn-soft shrink-0 !px-3 !py-1.5 !text-[13px]"
           @click="copyPassword"
         >
           复制

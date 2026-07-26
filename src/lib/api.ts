@@ -38,10 +38,12 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch {
-        // 刷新失败，清除 token 并跳转到登录页
+        // 刷新失败：静默登出（全站公开访问，不再强制跳登录页）。
+        // 动态引入避免循环依赖：stores/auth.ts 静态依赖本模块的 authApi。
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        const { useAuthStore } = await import('../stores/auth');
+        useAuthStore().logout();
       }
     }
 
