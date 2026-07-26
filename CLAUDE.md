@@ -29,8 +29,9 @@ src/
 ├── lib/            # 框架无关层：api.ts（axios 实例+拦截器）、daily-report-api.ts、markdown.ts
 ├── types/          # 共享 TypeScript 类型
 ├── stores/         # Pinia：auth.ts（全局唯一 store）
+├── composables/    # useTheme.ts（亮/暗主题切换，Navbar 与认证页共用）
 ├── router/         # vue-router 路由表 + 全局前置守卫（鉴权在这里，不在组件里）
-├── components/     # Navbar.vue
+├── components/     # Navbar.vue、AuthShell.vue（登录/注册共用外壳）
 └── pages/
     ├── DailyReports/   # AI/股票日报 + components/（ReportList、ReportContent）
     └── DevTools/       # 工具箱：components/ToolLayout.vue + tools/ 下 11 个独立工具 SFC
@@ -80,10 +81,10 @@ src/
 
 - **设计令牌**的唯一权威来源是 `src/index.css` 顶部的 `:root` 与 `[data-theme="dark"]` 块（oklch 值与设计稿 `site.css` 一致）：`--bg/--surface/--fg/--muted/--border/--accent(--soft/--strong)/--success/--warn/--danger/--domain/--shadow-card/--shadow-lift/--radius`。
 - 这些令牌经 `@theme inline` 映射为 Tailwind 工具类（`bg-bg` / `bg-surface` / `text-fg` / `text-muted` / `border-border` / `bg-accent` / `text-accent-strong` / `shadow-card` / `shadow-lift` 等），**亮暗主题随 `<html data-theme>` 自动切换，不要用 `dark:` 变体，也不要在组件里写死 `text-white`、`bg-white/5` 这类暗色假设**。
-- **主题切换**：`index.html` 内联脚本初始化（localStorage 键 `zhe-theme`，缺省跟随系统），切换按钮在 `Navbar.vue`。
-- 复用 `index.css` 已定义的组件类：`.od-card` / `.od-panel` / `.od-btn`（`-primary`/`-ghost`/`-soft`）/ `.od-input` / `.od-label` / `.od-error` / `.od-chip` / `.od-item`（`.active`）/ `.od-nav-link` / `.od-icon-btn` / `.eyebrow` / `.ticker`，不要重写相同样式。
+- **主题切换**：`index.html` 内联脚本初始化（localStorage 键 `zhe-theme`，缺省跟随系统），切换逻辑统一走 `src/composables/useTheme.ts`（Navbar 与认证页共用）。
+- 复用 `index.css` 已定义的组件类：`.od-card` / `.od-panel` / `.od-btn`（`-primary`/`-ghost`/`-soft`/`-lg`/`-block`）/ `.od-input` / `.od-label` / `.od-error` / `.od-chip` / `.od-item`（`.active`）/ `.od-nav-link` / `.od-icon-btn` / `.eyebrow` / `.ticker`，不要重写相同样式。
 - **图标一律用 `src/components/AppIcon.vue`**（Lucide 风格 SVG），禁止 emoji 充当图标；新工具/板块在组件内的 `icons` 映射中补充。
-- **遗留例外**：登录/注册页仍是旧的暗色玻璃拟态（`.glass` / `.glass-dark` / `.input-glass` / `.btn-primary` / `.error-message` / `.bg-mesh` / `.orb*` 为其保留，其他页面不得再使用），待后续按设计稿 `login.html` 重做后删除。
+- **登录/注册页**（2026-07-26 起按设计稿重做）：共用 `AuthShell.vue` 外壳（auth-shell 左右分栏 + 返回首页 + 主题切换），字段级校验态用 `.field-msg` / `.od-input.err|.ok`，动效用 `.anim-rise` / `.anim-shake`；旧暗色玻璃拟态类已全部删除，不得再引入。
 
 ## 三层边界模型
 
@@ -114,5 +115,5 @@ src/
 3. 涉及鉴权/路由的改动，浏览器手动验证：匿名可直接访问所有页面且 Navbar 显示「登录」；登录 → 回 `redirect` 来源页；退出 → 回 `/login` 且 localStorage 双 token 清空；token 过期 → 自动刷新无感继续（Network 面板可见 `/auth/refresh`）；刷新失败 → 静默登出留在当前页（Navbar 变回「登录」）。
 
 ---
-**版本**: v3.1（按 Open Design 设计稿全站换肤：亮/暗双主题设计令牌，登录/注册页暂保留旧风格）
-**最后更新**: 2026-07-22
+**版本**: v3.2（登录/注册页按设计稿重做为 auth-shell 布局，旧玻璃拟态类清除；主题切换抽为 useTheme）
+**最后更新**: 2026-07-26
