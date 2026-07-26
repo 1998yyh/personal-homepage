@@ -1,11 +1,11 @@
 {
   "kind": "critique-panel",
-  "score": 4,
+  "score": 5,
   "axes": {
-    "clarity": { "score": 5, "notes": "auth-shell 职责清晰：左栏回答「这是什么、为什么信它」，右栏只做表单；移动端折单栏保留品牌条" },
-    "hierarchy": { "score": 4, "notes": "左栏 display 大标题 + 手绘下划线呼应首页 Hero；表单 label/input/error 层级沿用 od- 体系" },
-    "typography": { "score": 4, "notes": "三栈各司其职；左栏 h2 clamp 缩放，信任锚点 b+span 双行层级清楚" },
-    "motion": { "score": 4, "notes": "密码可见性切换、强度条 4 级渐变、按钮下沉；reduced-motion 全局回退仍生效" },
-    "brand": { "score": 4, "notes": "左栏底色用 accent-soft 计算字面值（渲染引擎 color-mix 色相偏差已修复并注释）；accent 本屏 2 次（下划线 + 主 CTA），守住预算" }
+    "clarity": { "score": 5, "notes": "对话页三态（空态/流式/完成）各自明确：流式有闪烁光标 + 停止按钮换形，完成态 hover 才露操作；管理页启停开关即时置灰整张卡片，状态一眼可读" },
+    "hierarchy": { "score": 5, "notes": "会话列表 今天/昨天/过去7天 分组 + active 左侧 accent 指示条；消息流用户右气泡 / 助手左富文本非对称对齐，760px 阅读栏宽与日报页一致" },
+    "typography": { "score": 4, "notes": "端点与代码块走 mono 体系，inline code 与 pre code 分层（pre 内不再继承 accent-soft 底色）；消息 14px/1.7 行高长读舒适" },
+    "motion": { "score": 5, "notes": "流式逐段打字（24ms/3字符）+ 光标呼吸；抽屉 240ms 弹簧曲线滑入，开关/skills chips 微过渡；reduced-motion 全部回退静态" },
+    "brand": { "score": 5, "notes": "accent 预算守住：对话页仅「新对话 + 发送键」，管理页仅「新建 + 保存」；字段校验/shake/pwd-toggle 全套复用注册页模式，令牌零新增" }
   }
 }

@@ -24,7 +24,7 @@
   <span class="status-pill"><span class="status-dot"></span>v1.0 · 与 src/index.css 令牌同步</span>
   <h1>Web Tools 全站设计稿</h1>
   <p class="page-desc" style="font-size:16px">
-    覆盖首页、AI / 股票日报、开发工具箱与重设计的登录注册，共 6 块画板。
+    覆盖首页、AI / 股票日报、开发工具箱、Agent 对话与管理、重设计的登录注册，共 8 块画板。
     亮 / 暗双主题由右上角切换实时呈现（与线上一致，写入 <code style="font-family:var(--font-mono);font-size:13px;background:color-mix(in oklch, var(--fg) 8%, transparent);padding:2px 6px;border-radius:4px">zhe-theme</code>）。
     每屏 accent 点缀不超过两次，股票板块使用领域色 <strong style="color:var(--domain)">domain</strong> 与钴蓝主色拉开。
   </p>
@@ -41,7 +41,7 @@
 <!-- 画板 -->
 <section class="container ov-section" data-od-id="screens">
   <p class="eyebrow">Artboards</p>
-  <h2>六块画板</h2>
+  <h2>八块画板</h2>
   <div class="screen-grid">
     <a class="od-card screen-card" href="home.html" data-od-id="screen-home">
       <span class="icon-tile grad-soft"><i data-icon="home" data-size="20"></i></span>
@@ -66,6 +66,18 @@
       <span class="t">开发工具箱 <i data-icon="arrow-right" data-size="15"></i></span>
       <span class="d">11 个工具全部可用：Base64 / JSON / 时间戳 / 颜色 / UUID / 密码 / Hash…</span>
       <span class="tags"><span class="tag">真实可算</span><span class="tag">搜索过滤</span></span>
+    </a>
+    <a class="od-card screen-card" href="agent-chat.html" data-od-id="screen-agent-chat">
+      <span class="icon-tile grad-accent"><i data-icon="message-square" data-size="20"></i></span>
+      <span class="t">Agent 对话 <i data-icon="arrow-right" data-size="15"></i></span>
+      <span class="d">左侧会话列表（新对话 / 搜索 / 按天分组），中部消息流：流式打字、停止、重新生成、代码块复制。</span>
+      <span class="tags"><span class="tag">Cursor 式交互</span><span class="tag">可交互</span></span>
+    </a>
+    <a class="od-card screen-card" href="agent-admin.html" data-od-id="screen-agent-admin">
+      <span class="icon-tile grad-soft"><i data-icon="sliders-horizontal" data-size="20"></i></span>
+      <span class="t">Agent 管理 <i data-icon="arrow-right" data-size="15"></i></span>
+      <span class="d">Agent 卡片网格 + 右侧抽屉表单：请求地址 / API Key / 模型 / 温度 / 系统提示词 / 挂载 Skills，含测试连接。</span>
+      <span class="tags"><span class="tag">抽屉表单</span><span class="tag">字段校验</span></span>
     </a>
     <a class="od-card screen-card" href="login.html" data-od-id="screen-login">
       <span class="icon-tile grad-soft"><i data-icon="log-in" data-size="20"></i></span>
