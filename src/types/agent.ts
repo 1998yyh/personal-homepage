@@ -108,9 +108,12 @@ export interface SseToolResult {
 }
 
 export interface SseMessageEnd {
+  /** 本轮 assistant 完整内容（中间轮/工具调用轮常为空串） */
   content: string
   toolCalls: ToolCallRecord[] | null
+  /** 跨轮累计 token（input+output） */
   totalTokens: number
+  conversationId: string
 }
 
 export interface SseError {
