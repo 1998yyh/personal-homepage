@@ -294,6 +294,24 @@ textarea.od-input { resize: none; line-height: 1.6; }
 .pwd-hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; min-height: 1em; }
 .od-error.with-icon { display: flex; align-items: flex-start; gap: 8px; }
 .od-error.with-icon svg { flex-shrink: 0; margin-top: 1px; }
+
+/* ---------- 字段级校验态 ---------- */
+.field-msg { display: flex; align-items: center; gap: 5px; font-size: 12.5px; margin-top: 6px; min-height: 1.1em; color: var(--muted); transition: color .2s; }
+.field-msg.err { color: var(--danger); }
+.field-msg.ok { color: var(--success); }
+.od-input.err { border-color: color-mix(in oklch, var(--danger) 55%, var(--border)); }
+.od-input.err:focus { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in oklch, var(--danger) 16%, transparent); }
+.od-input.ok { border-color: color-mix(in oklch, var(--success) 45%, var(--border)); }
+.od-input.ok:focus { border-color: var(--success); box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 14%, transparent); }
+
+/* ---------- 动效原语（emilkowalski 标准：入场 200–300ms / stagger 40–60ms / 错误弹簧） ---------- */
+@keyframes od-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.anim-rise { animation: od-rise .28s cubic-bezier(.22, .68, .35, 1) both; }
+.anim-rise.d1 { animation-delay: .05s; } .anim-rise.d2 { animation-delay: .10s; }
+.anim-rise.d3 { animation-delay: .15s; } .anim-rise.d4 { animation-delay: .20s; }
+.anim-rise.d5 { animation-delay: .25s; } .anim-rise.d6 { animation-delay: .30s; }
+@keyframes od-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 45% { transform: translateX(6px); } 70% { transform: translateX(-3px); } 88% { transform: translateX(2px); } }
+.anim-shake { animation: od-shake .38s cubic-bezier(.36, .07, .19, .97) both; }
 @media (max-width: 920px) {
   .auth-stage { padding: 16px; align-items: flex-start; }
   .auth-shell { grid-template-columns: 1fr; min-height: 0; margin-top: 44px; }
@@ -350,5 +368,6 @@ textarea.od-input { resize: none; line-height: 1.6; }
   html { scroll-behavior: auto; }
   .ticker-track { animation: none; }
   .status-dot { animation: none; }
+  .anim-rise, .anim-shake { animation: none; }
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }

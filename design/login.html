@@ -16,7 +16,7 @@
   <div class="od-card auth-shell" data-od-id="login-shell">
     <!-- 左栏 · 品牌叙事 -->
     <aside class="auth-brand" data-od-id="brand-panel">
-      <div class="auth-brand-top">
+      <div class="auth-brand-top anim-rise">
         <span class="brand-badge">哲</span>
         <div>
           <h2>把重复的事交给<span class="u">工具<svg viewBox="0 0 120 12" preserveAspectRatio="none"><path d="M2 8 Q 16 2, 32 7 T 62 7 T 92 6 T 118 7" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg></span>，<br>把思考留给自己。</h2>
@@ -24,48 +24,50 @@
         </div>
       </div>
 
-      <ul class="auth-points">
+      <ul class="auth-points anim-rise d2">
         <li><i data-icon="bot" data-size="17"></i><div><b>每日 AI 情报早报</b><span>AI / Agent / Claude Code 精选，通勤路上读完</span></div></li>
         <li><i data-icon="trending-up" data-size="17"></i><div><b>A股 / 港股市场复盘</b><span>收盘后十分钟，知道今天该知道的事</span></div></li>
         <li><i data-icon="shield" data-size="17"></i><div><b>数据自有，匿名可访问</b><span>全站免登录可用，账户只用于个性化</span></div></li>
       </ul>
 
-      <div class="auth-brand-foot">终身学习 · 长期主义</div>
+      <div class="auth-brand-foot anim-rise d3">终身学习 · 长期主义</div>
     </aside>
 
     <!-- 右栏 · 登录表单 -->
     <div class="auth-panel" data-od-id="login-panel">
-      <div class="auth-logo">
+      <div class="auth-logo anim-rise d1">
         <h1>欢迎回来</h1>
         <p>登录你的账户继续探索</p>
       </div>
 
-      <form class="auth-form" id="login-form" novalidate>
-        <div>
+      <form class="auth-form anim-rise d2" id="login-form" novalidate>
+        <div class="field" data-field="login">
           <label class="od-label" for="login">邮箱或用户名</label>
           <input id="login" type="text" class="od-input" placeholder="输入邮箱或用户名" autocomplete="username">
+          <p class="field-msg" id="msg-login"></p>
         </div>
-        <div>
+        <div class="field" data-field="password">
           <label class="od-label" for="password">密码</label>
           <div class="pwd-wrap">
             <input id="password" type="password" class="od-input" placeholder="输入密码" autocomplete="current-password">
             <button type="button" class="pwd-toggle" id="pwd-toggle" aria-label="显示密码"></button>
           </div>
+          <p class="field-msg" id="msg-password"></p>
         </div>
         <div class="od-error with-icon" id="form-error" style="display:none"></div>
         <button type="submit" class="od-btn od-btn-primary od-btn-lg od-btn-block" id="submit-btn" data-od-id="login-submit">登录</button>
       </form>
 
-      <div class="auth-divider"><span>或</span></div>
-      <p class="auth-switch">还没有账户？ <a href="register.html">立即注册</a></p>
-      <p class="auth-foot">© 2026 Web Tools · 全站匿名可访问，登录用于展示个人信息</p>
+      <div class="auth-divider anim-rise d3"><span>或</span></div>
+      <p class="auth-switch anim-rise d4">还没有账户？ <a href="register.html">立即注册</a></p>
+      <p class="auth-foot anim-rise d5">© 2026 Web Tools · 全站匿名可访问，登录用于展示个人信息</p>
     </div>
   </div>
 </div>
 
 <script src="shared.js"></script>
 <script>
-/* 密码可见性切换 */
+/* ---------- 密码可见性切换 ---------- */
 const pwdInput = document.getElementById('password');
 const pwdToggle = document.getElementById('pwd-toggle');
 function syncToggleIcon() {
@@ -79,24 +81,54 @@ pwdToggle.addEventListener('click', () => {
 });
 syncToggleIcon();
 
-/* 提交（演示） */
+/* ---------- 字段级状态（登录只有非空约束） ---------- */
+const FIELDS = {
+  login:    { el: document.getElementById('login'), msg: document.getElementById('msg-login'),    empty: '请输入邮箱或用户名' },
+  password: { el: pwdInput,                         msg: document.getElementById('msg-password'), empty: '请输入密码' },
+};
+
+function setState(key, state, text) {
+  const f = FIELDS[key];
+  f.el.classList.remove('err', 'ok');
+  f.msg.classList.remove('err', 'ok');
+  if (state) { f.el.classList.add(state); f.msg.classList.add(state); }
+  f.msg.innerHTML = text
+    ? `${state === 'err' ? odSvg('alert-circle', 13) : odSvg('check', 13)}<span>${text}</span>`
+    : '';
+}
+
+Object.keys(FIELDS).forEach((key) => {
+  const f = FIELDS[key];
+  f.el.addEventListener('blur', () => { if (f.el.value.trim()) setState(key, '', ''); });
+  f.el.addEventListener('input', () => { if (f.el.classList.contains('err') && f.el.value.trim()) setState(key, '', ''); });
+});
+
+/* ---------- 提交：空值字段级提示，聚焦并弹簧提示首个 ---------- */
 const form = document.getElementById('login-form');
 const errEl = document.getElementById('form-error');
 const btn = document.getElementById('submit-btn');
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   errEl.style.display = 'none';
-  const login = document.getElementById('login').value.trim();
-  const pwd = pwdInput.value;
-  if (!login || !pwd) {
-    errEl.innerHTML = `${odSvg('alert-circle', 16)}<span>请输入邮箱/用户名和密码</span>`;
-    errEl.style.display = '';
+
+  let firstBad = null;
+  Object.keys(FIELDS).forEach((key) => {
+    const f = FIELDS[key];
+    if (!f.el.value.trim()) { setState(key, 'err', f.empty); if (!firstBad) firstBad = f.el; }
+    else setState(key, '', '');
+  });
+
+  if (firstBad) {
+    firstBad.focus();
+    const box = firstBad.closest('.field');
+    box.classList.remove('anim-shake'); void box.offsetWidth; box.classList.add('anim-shake');
     return;
   }
+
   btn.disabled = true; btn.textContent = '登录中...';
   setTimeout(() => {
     btn.disabled = false; btn.textContent = '登录';
-    errEl.innerHTML = '<span>演示环境：此处将调用 /api/auth/login，成功后回跳来源页</span>';
+    errEl.innerHTML = `${odSvg('alert-circle', 16)}<span>演示环境：此处将调用 /api/auth/login，成功后回跳来源页</span>`;
     errEl.style.display = '';
   }, 900);
 });
