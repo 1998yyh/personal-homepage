@@ -34,7 +34,10 @@ src/
 ├── components/     # Navbar.vue、AuthShell.vue（登录/注册共用外壳）
 └── pages/
     ├── DailyReports/   # AI/股票日报 + components/（ReportList、ReportContent）
-    └── DevTools/       # 工具箱：components/ToolLayout.vue + tools/ 下 11 个独立工具 SFC
+    ├── DevTools/       # 工具箱：components/ToolLayout.vue + tools/ 下 11 个独立工具 SFC
+    └── Agents/         # Agent 管理（AgentsPage + AgentFormDrawer 右侧抽屉表单）与 SSE 对话（AgentChatPage，
+                        # 左侧会话列表 + 右侧聊天）；SSE 走 composables/useAgentStream.ts，
+                        # 接口在 lib/agents-api.ts，类型在 types/agent.ts
 ```
 
 ## 后端连接
@@ -115,5 +118,5 @@ src/
 3. 涉及鉴权/路由的改动，浏览器手动验证：匿名可直接访问所有页面且 Navbar 显示「登录」；登录 → 回 `redirect` 来源页；退出 → 回 `/login` 且 localStorage 双 token 清空；token 过期 → 自动刷新无感继续（Network 面板可见 `/auth/refresh`）；刷新失败 → 静默登出留在当前页（Navbar 变回「登录」）。
 
 ---
-**版本**: v3.2（登录/注册页按设计稿重做为 auth-shell 布局，旧玻璃拟态类清除；主题切换抽为 useTheme）
+**版本**: v3.3（新增 Agents 板块：管理页 + SSE 流式对话页，od- 设计系统；SSE 为多轮事件序列，message_end 非流结束信号）
 **最后更新**: 2026-07-26

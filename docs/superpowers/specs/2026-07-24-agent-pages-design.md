@@ -1,11 +1,13 @@
 # Agent 页面设计文档
 
-- **日期**: 2026-07-24（经 grilling 评审后修订）
+- **日期**: 2026-07-24（经 grilling 评审后修订；2026-07-26 实施时按后端真实行为二次修订）
 - **分支**: `feat/agent-page`（已合并 `origin/feature-kimi3`，前端栈为 Vue 3）
 - **后端**: `tuanzi-server-base`（NestJS），Agent/会话/SSE 接口已就绪
-- ⚠️ **前置依赖**：本前端依赖后端三项配套变更先落地，详见
-  `tuanzi-server-base/docs/plans/2026-07-24-agent-backend-adjustments.md`：
-  ① 消息历史 DESC 分页；② SSE 模式 user 消息落库时机后移；③ messages 表新增 `total_tokens` 列
+- ✅ **前置依赖已落地**（2026-07-26，tuanzi-server-base `feat/llm` 分支）：
+  ① 消息历史 DESC 分页（`seq DESC`）；② SSE 模式 user 消息落库时机后移（流正常结束才落 user+agent 消息，含标题回填）；
+  ③ messages 表 `total_tokens` 列写入本轮最后一条 assistant 消息（跨轮累计值）；
+  ④ 追加修复：工具事件 id 统一为模型的 tool_call id（经 `RunnableConfig.metadata` 透传），
+  否则历史归组 `toolCallId ↔ toolCalls[].id` 配对不上（原实现混用了运行时 run_id）
 
 ## 1. 需求范围
 
@@ -46,22 +48,24 @@
 | GET | `/conversations/:id/messages?page=&limit=` | 消息历史分页 ⚠️**依赖后端变更①：DESC 分页（最新在前）**；响应含 `totalTokens` ⚠️**依赖变更③** |
 | POST | `/conversations/:id/messages?stream=true` | 发送消息，SSE 流式响应 ⚠️**依赖变更②：流异常时展示层零残留** |
 
-**串行约束**：同一会话必须串行发消息，收到 `message_end` 前禁止发下一条。
+**串行约束**：同一会话必须串行发消息，收到流结束（连接关闭）前禁止发下一条。
 
-**SSE 事件序列**：
+**SSE 事件序列**（后端真实序列为**多轮**——ReAct 每轮迭代一对 message_start/message_end，
+tool_use/tool_result 发生在 message_end **之后**；前端不得以 message_end 作为流结束信号，
+流结束以连接关闭为准）：
 
 ```
-message_start → [text_delta]* → [tool_use → tool_result]* → message_end
-                                                            ↘ error（异常时，随后关流）
+message_start → [text_delta]* → message_end → [tool_use → tool_result]* → message_start → … → message_end → 连接关闭
+                                                                                              ↘ error（异常时，随后关流）
 ```
 
 事件格式：`event: <type>\ndata: <json>\n\n`。data 形状（已核对 `agent-executor.service.ts` 的 `mapToSseEvent`）：
 
 - `message_start → { role: 'assistant' }`
 - `text_delta → { text: string }`
-- `tool_use → { id: string, name: string, args: Record<string, unknown> }`
-- `tool_result → { callId: string, name: string, content: string }`（`callId` 对应 `tool_use` 的 `id`）
-- `message_end → { content: string, toolCalls: Array<{ id, name, args }> | null, totalTokens: number }`（以后端重建的最终消息为准；text_delta/tool_use 仅用于实时展示）
+- `tool_use → { id: string, name: string, args: Record<string, unknown> }`（`id` 为模型的 tool_call id）
+- `tool_result → { callId: string, name: string, content: string }`（`callId` 对应 `tool_use` 的 `id`，同为 tool_call id）
+- `message_end → { content: string, toolCalls: Array<{ id, name, args }> | null, totalTokens: number, conversationId: string }`（content/toolCalls 为**本轮** assistant 消息的最终值；中间轮 content 常为空串，仅非空时覆盖展示文本；totalTokens 为跨轮累计值）
 - `error → { message: string }`
 
 **历史消息实体**（`GET /conversations/:id/messages` 返回）：
@@ -86,7 +90,7 @@ message_start → [text_delta]* → [tool_use → tool_result]* → message_end
 
 | 路由 | 页面 | 职责 |
 |---|---|---|
-| `/agents` | `AgentsPage.vue` | Agent 卡片列表 + 新建/编辑/删除（弹窗表单） |
+| `/agents` | `AgentsPage.vue` | Agent 卡片列表 + 新建/编辑/删除（右侧抽屉表单，按设计稿 agent-admin.html；2026-07-26 用户决策，覆盖原「弹窗」表述） |
 | `/agents/:id` | `AgentChatPage.vue` | 左侧会话列表 + 右侧聊天窗口；选中会话同步到 `?c=<conversationId>` |
 
 Navbar `navItems` 增加：`{ path: '/agents', label: 'Agent', emoji: '🧠', activePattern: /\/agents/ }`。
@@ -113,7 +117,7 @@ src/
         ├── utils/
         │   └── groupMessages.ts      # 历史消息归组纯函数（见 §7）
         └── components/
-            ├── AgentFormModal.vue    # 创建/编辑表单弹窗（简易+高级折叠）
+            ├── AgentFormDrawer.vue   # 创建/编辑表单抽屉（右侧滑入，简易+高级折叠）
             ├── ConversationList.vue  # 会话侧边栏
             ├── MessageBubble.vue     # 消息气泡（user/assistant）
             └── ToolCallCard.vue      # 工具调用卡片（实时流式与历史渲染共用）
@@ -184,14 +188,14 @@ src/
 ## 8. useAgentStream 状态机
 
 ```
-idle ──发送──▶ streaming ──message_end──▶ done → invalidate messages → idle
+idle ──发送──▶ streaming ──流正常结束（连接关闭）──▶ done → invalidate messages → idle
                  │
                  └──error 事件/断流──▶ error（保留已生成文本，可重试）
 ```
 
 解析逻辑：`onDownloadProgress` 取 `xhr.responseText` 全量文本，记录已消费偏移量，buffer 按 `\n\n` 切事件、按 `event:`/`data:` 行解析后 `JSON.parse`。
 
-临时 assistant 消息结构：`{ text: string, toolCalls: Array<{ id, name, args, content?, status: 'running'|'done' }> }`（`tool_result.callId` 回填对应 `id` 的卡片）。`message_end` 以后端重建的 content/toolCalls 为最终准绳，修正临时消息的拼接误差。
+临时 assistant 消息结构：`{ text: string, toolCalls: Array<{ id, name, args, content?, status: 'running'|'done' }> }`（`tool_result.callId` 回填对应 `id` 的卡片）。`message_end` 每轮触发一次：仅在该轮 `content` 非空时覆盖展示文本、刷新累计 `totalTokens`、兜底补齐工具卡片——**不作流结束信号**。
 
 **重试语义**（依赖后端变更②）：error 状态下展示"重试"按钮 → **原样重发同一 content**。因 user 消息落库时机已后移到流正常结束，重发不会产生重复消息。
 
