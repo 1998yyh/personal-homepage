@@ -181,6 +181,32 @@
   }
   .ticker span::after { content: "✳"; color: var(--border); font-size: 12px; }
 
+  /* ===== 右侧抽屉（Agent 新建/编辑表单，对齐 design/agent-admin.html）===== */
+  .od-drawer-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: oklch(20% 0.02 240 / 0.4);
+    animation: od-fade .2s ease both;
+  }
+  .od-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 51;
+    width: min(480px, 100vw);
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-lift);
+    display: flex; flex-direction: column;
+    animation: od-slide-in .24s cubic-bezier(.22, .68, .35, 1) both;
+  }
+  @keyframes od-fade { from { opacity: 0; } }
+  @keyframes od-slide-in { from { transform: translateX(100%); } }
+
+  /* 通用弹窗（删除确认等轻量确认框） */
+  .od-modal-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: oklch(20% 0.02 240 / 0.4);
+    animation: od-fade .2s ease both;
+  }
+
   /* ===== 认证页 · auth-shell 左右分栏（对齐 design/login.html、register.html）===== */
   .brand-badge {
     width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
@@ -348,6 +374,15 @@
 .markdown-content.theme-stock a { color: var(--domain) !important; }
 .markdown-content.theme-stock blockquote { border-left-color: color-mix(in oklch, var(--domain) 35%, transparent); }
 
+/* 聊天消息里的 markdown（.chat-md）：日报的卡片式 li/大间距在气泡里太重，还原为常规排版 */
+.markdown-content.chat-md p { margin-bottom: 0.75rem; }
+.markdown-content.chat-md p:last-child { margin-bottom: 0; }
+.markdown-content.chat-md ul, .markdown-content.chat-md ol {
+  gap: 0.25rem; margin-bottom: 0.75rem; padding-left: 1.25rem; list-style: revert;
+}
+.markdown-content.chat-md li { background: none; border: none; border-radius: 0; padding: 0; }
+.markdown-content.chat-md li:hover { background: none; }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -370,6 +405,6 @@
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .ticker-track { animation: none; }
-  .anim-rise, .anim-shake { animation: none; }
+  .anim-rise, .anim-shake, .od-drawer, .od-drawer-overlay, .od-modal-overlay { animation: none; }
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }

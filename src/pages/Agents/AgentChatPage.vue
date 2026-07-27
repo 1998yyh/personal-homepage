@@ -7,6 +7,7 @@ import type { Conversation } from '../../types/agent'
 import { useAgentStream } from '../../composables/useAgentStream'
 import { groupMessages } from './utils/groupMessages'
 import Navbar from '../../components/Navbar.vue'
+import AppIcon from '../../components/AppIcon.vue'
 import ConversationList from './components/ConversationList.vue'
 import MessageBubble from './components/MessageBubble.vue'
 
@@ -103,7 +104,10 @@ const stream = useAgentStream()
 const pendingUserMessage = ref<string | null>(null)
 
 const input = ref('')
+const inputEl = ref<HTMLTextAreaElement | null>(null)
 const messagesEl = ref<HTMLElement | null>(null)
+/** 建会话等发送前置步骤的错误（流内错误走 stream.errorMessage） */
+const sendError = ref<string | null>(null)
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -114,17 +118,33 @@ const scrollToBottom = () => {
 // 新消息/流式输出时自动滚底
 watch([() => grouped.value.length, () => stream.streamingMessage.value?.text], scrollToBottom)
 
+// textarea 自动增高（上限 180px，对齐设计稿 composer）
+watch(input, () => {
+  nextTick(() => {
+    const el = inputEl.value
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 180)}px`
+  })
+})
+
 const sendMessage = async () => {
   const content = input.value.trim()
   if (!content || stream.streaming.value || agentDisabled.value) return
+  sendError.value = null
 
   // 草稿态：先建真实会话
   let convId = activeConvId.value
   if (!convId) {
-    const conv: Conversation = await agentsApi.createConversation(agentId)
-    convId = conv.id
+    try {
+      const conv: Conversation = await agentsApi.createConversation(agentId)
+      convId = conv.id
+    } catch {
+      sendError.value = '创建会话失败，请稍后重试'
+      return
+    }
     isDraft.value = false
-    selectedId.value = conv.id
+    selectedId.value = convId
     queryClient.invalidateQueries({ queryKey: ['conversations', agentId] })
   }
 
@@ -133,7 +153,7 @@ const sendMessage = async () => {
   scrollToBottom()
 
   await stream.send(convId, content, () => {
-    // message_end：消息列表归位后清理临时状态（历史里已有 user+assistant）
+    // 流正常结束：消息列表归位后清理临时状态（历史里已有 user+assistant）
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ['messages', convId] }),
       queryClient.invalidateQueries({ queryKey: ['conversations', agentId] }),
@@ -146,6 +166,18 @@ const sendMessage = async () => {
   // error 状态保留 pendingUserMessage 与已生成文本，等用户重试或放弃
   if (stream.status.value !== 'error') {
     pendingUserMessage.value = null
+  }
+}
+
+// 停止生成：断流后拉一次消息列表，与后端断连时的落库状态对齐
+// （后端落库时机后移，已生成内容可能已持久化也可能被丢弃，以拉回的为准）
+const stopStreaming = () => {
+  const convId = activeConvId.value
+  stream.abort()
+  pendingUserMessage.value = null
+  if (convId) {
+    queryClient.invalidateQueries({ queryKey: ['messages', convId] })
+    queryClient.invalidateQueries({ queryKey: ['conversations', agentId] })
   }
 }
 
@@ -184,76 +216,93 @@ const deleteMutation = useMutation({
   },
 })
 
+const openDeleteConv = (conv: Conversation) => {
+  deleteMutation.reset() // 清掉上次删除失败的错误态
+  deletingConv.value = conv
+}
+
 // 离开页面断流
 onBeforeUnmount(() => stream.abort())
 </script>
 
 <template>
-  <div class="min-h-screen bg-mesh relative overflow-hidden">
-    <div class="orb orb-1" />
-    <div class="orb orb-2" />
-    <div class="orb orb-3" />
-
+  <div class="min-h-screen">
     <Navbar />
 
-    <main class="relative z-10 max-w-7xl mx-auto px-4 py-4">
-      <div class="flex gap-6 h-[calc(100vh-88px)]">
-        <!-- 左侧：会话列表 -->
-        <div class="w-56 flex-shrink-0 glass-dark rounded-xl overflow-hidden">
-          <ConversationList
-            :conversations="conversations"
-            :selected-id="selectedId"
-            :is-draft="isDraft"
-            :is-loading="convLoading"
-            :has-more="convHasMore ?? false"
-            :is-fetching-more="convFetchingMore"
-            @select="selectConversation"
-            @new-conversation="startDraft"
-            @load-more="fetchMoreConvs()"
-            @remove="deletingConv = $event"
-          />
-        </div>
+    <!-- chat-shell：左栏会话列表 + 右栏聊天窗口（对齐 design/agent-chat.html） -->
+    <main class="h-[calc(100vh-64px)] grid grid-cols-[272px_1fr] max-md:grid-cols-[220px_1fr]">
+      <!-- 左栏 -->
+      <aside class="bg-surface border-r border-border flex flex-col min-h-0">
+        <ConversationList
+          :conversations="conversations"
+          :selected-id="selectedId"
+          :is-draft="isDraft"
+          :is-loading="convLoading"
+          :has-more="convHasMore ?? false"
+          :is-fetching-more="convFetchingMore"
+          @select="selectConversation"
+          @new-conversation="startDraft"
+          @load-more="fetchMoreConvs()"
+          @remove="openDeleteConv"
+        />
+      </aside>
 
-        <!-- 右侧：聊天窗口 -->
-        <div class="flex-1 glass-dark rounded-xl overflow-hidden flex flex-col">
-          <!-- 头部 -->
-          <div class="px-5 py-3 border-b border-white/[0.06] flex items-center gap-3">
-            <span class="text-xl">🧠</span>
-            <div>
-              <div class="text-white font-medium">
-                {{ agent?.name ?? '...' }}
-              </div>
-              <div class="text-white/40 text-xs">
-                {{ agent?.model }}
-              </div>
-            </div>
-            <span
-              v-if="agentDisabled"
-              class="ml-auto text-red-400/80 text-xs"
-            >该 Agent 已停用</span>
+      <!-- 右栏 -->
+      <section class="flex flex-col min-h-0">
+        <!-- 头部 -->
+        <header class="bg-surface border-b border-border px-5 py-3 flex items-center gap-3 shrink-0">
+          <div class="w-9 h-9 rounded-[10px] bg-accent text-white grid place-items-center shrink-0">
+            <AppIcon
+              name="bot"
+              :size="18"
+            />
           </div>
+          <div class="min-w-0">
+            <div class="text-fg font-semibold text-sm truncate">
+              {{ agent?.name ?? '...' }}
+            </div>
+            <div class="text-muted text-xs truncate">
+              {{ agent?.model }}
+            </div>
+          </div>
+          <span
+            v-if="agentDisabled"
+            class="ml-auto text-danger text-xs shrink-0"
+          >该 Agent 已停用</span>
+        </header>
 
-          <!-- 消息区 -->
-          <div
-            ref="messagesEl"
-            class="flex-1 overflow-y-auto px-5 py-4 space-y-4"
-          >
+        <!-- 消息区 -->
+        <div
+          ref="messagesEl"
+          class="flex-1 overflow-y-auto"
+        >
+          <div class="max-w-[760px] mx-auto px-5 py-6 flex flex-col gap-[22px] min-h-full">
             <!-- 空状态 -->
             <div
               v-if="!activeConvId && !isDraft"
-              class="h-full flex flex-col items-center justify-center text-center"
+              class="flex-1 flex flex-col items-center justify-center text-center"
             >
-              <div class="text-4xl mb-3">
-                💬
+              <div class="w-14 h-14 rounded-2xl bg-accent text-white grid place-items-center mb-4">
+                <AppIcon
+                  name="bot"
+                  :size="26"
+                />
               </div>
-              <p class="text-white/50 text-sm mb-4">
+              <h2 class="font-display font-bold text-lg text-fg mb-1.5">
+                开始和 {{ agent?.name ?? 'Agent' }} 对话
+              </h2>
+              <p class="text-muted text-sm mb-6">
                 还没有会话，开始一个新的吧
               </p>
               <button
-                class="btn-primary !w-auto px-6 !py-2"
+                class="od-btn od-btn-primary"
                 @click="startDraft"
               >
-                + 新建会话
+                <AppIcon
+                  name="plus"
+                  :size="16"
+                />
+                新建会话
               </button>
             </div>
 
@@ -264,7 +313,7 @@ onBeforeUnmount(() => stream.abort())
                 class="text-center"
               >
                 <button
-                  class="text-white/40 hover:text-white/70 text-xs transition-colors disabled:opacity-50"
+                  class="text-muted hover:text-fg text-xs transition-colors disabled:opacity-50"
                   :disabled="msgFetchingMore"
                   @click="fetchMoreMsgs()"
                 >
@@ -305,9 +354,9 @@ onBeforeUnmount(() => stream.abort())
                 v-if="stream.status.value === 'error'"
                 class="flex items-center gap-3 justify-center"
               >
-                <span class="text-red-400/90 text-sm">{{ stream.errorMessage.value ?? '执行异常，请重试' }}</span>
+                <span class="od-error !py-2 text-xs">{{ stream.errorMessage.value ?? '执行异常，请重试' }}</span>
                 <button
-                  class="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 text-xs hover:bg-red-500/30 transition-colors"
+                  class="od-btn od-btn-soft !py-1.5 !px-3 text-xs"
                   @click="retrySend"
                 >
                   重试
@@ -315,53 +364,88 @@ onBeforeUnmount(() => stream.abort())
               </div>
             </template>
           </div>
+        </div>
 
-          <!-- 输入区 -->
-          <div class="px-5 py-4 border-t border-white/[0.06]">
-            <div class="flex gap-3 items-end">
+        <!-- 输入区（composer-box，对齐设计稿） -->
+        <footer class="px-5 pb-5 pt-2 shrink-0">
+          <div class="max-w-[760px] mx-auto">
+            <p
+              v-if="sendError"
+              class="od-error !py-2 text-xs mb-2"
+            >
+              {{ sendError }}
+            </p>
+            <div class="bg-surface border border-border rounded-2xl shadow-card transition-colors focus-within:border-accent-strong">
               <textarea
+                ref="inputEl"
                 v-model="input"
-                class="input-glass resize-none flex-1 !py-2.5"
                 rows="1"
-                :placeholder="agentDisabled ? '该 Agent 已停用，无法发送' : '输入消息，Enter 发送，Shift+Enter 换行'"
+                class="w-full bg-transparent resize-none outline-none px-4 pt-3.5 text-sm text-fg placeholder:text-muted/70 max-h-[180px]"
+                :placeholder="agentDisabled ? '该 Agent 已停用，无法发送' : '给 Agent 发送消息...'"
                 :disabled="stream.streaming.value || agentDisabled || (!activeConvId && !isDraft)"
-                @keydown.enter.exact.prevent="sendMessage"
+                @keydown.enter.exact.prevent="!$event.isComposing && sendMessage()"
               />
-              <button
-                class="btn-primary !w-auto px-6 !py-2.5 disabled:opacity-40 disabled:pointer-events-none"
-                :disabled="!input.trim() || stream.streaming.value || agentDisabled || (!activeConvId && !isDraft)"
-                @click="sendMessage"
-              >
-                {{ stream.streaming.value ? '回复中...' : '发送' }}
-              </button>
+              <div class="flex items-center px-3 pb-3 pt-1.5">
+                <span class="text-muted/70 text-[11.5px]">Enter 发送 · Shift+Enter 换行</span>
+                <!-- 流式中：停止按钮 -->
+                <button
+                  v-if="stream.streaming.value"
+                  class="ml-auto w-[34px] h-[34px] rounded-full bg-danger text-white grid place-items-center transition hover:opacity-90"
+                  title="停止生成"
+                  @click="stopStreaming"
+                >
+                  <AppIcon
+                    name="square"
+                    :size="13"
+                  />
+                </button>
+                <button
+                  v-else
+                  class="ml-auto w-[34px] h-[34px] rounded-full bg-accent text-white grid place-items-center transition hover:-translate-y-px disabled:opacity-45 disabled:pointer-events-none"
+                  title="发送"
+                  :disabled="!input.trim() || agentDisabled || (!activeConvId && !isDraft)"
+                  @click="sendMessage"
+                >
+                  <AppIcon
+                    name="send"
+                    :size="15"
+                  />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </footer>
+      </section>
     </main>
 
     <!-- 删除会话确认弹窗 -->
     <div
       v-if="deletingConv"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      class="od-modal-overlay"
       @click.self="deletingConv = null"
     >
-      <div class="glass-dark rounded-2xl w-full max-w-sm p-6">
-        <h2 class="text-lg font-display font-bold text-white mb-2">
+      <div class="od-card w-full max-w-sm p-6">
+        <h2 class="font-display text-lg font-bold text-fg mb-2">
           删除会话
         </h2>
-        <p class="text-white/60 text-sm mb-6">
+        <p class="text-muted text-sm mb-6">
           确定删除「{{ deletingConv.title || '未命名会话' }}」吗？删除后消息记录不可恢复。
+        </p>
+        <p
+          v-if="deleteMutation.isError.value"
+          class="od-error mb-4"
+        >
+          删除失败，请稍后重试
         </p>
         <div class="flex gap-3">
           <button
-            class="flex-1 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+            class="od-btn od-btn-ghost flex-1"
             @click="deletingConv = null"
           >
             取消
           </button>
           <button
-            class="flex-1 py-2.5 rounded-xl bg-red-500/80 hover:bg-red-500 text-white font-medium transition-colors disabled:opacity-50"
+            class="od-btn flex-1 bg-danger text-white hover:opacity-90"
             :disabled="deleteMutation.isPending.value"
             @click="deleteMutation.mutate(deletingConv.id)"
           >
