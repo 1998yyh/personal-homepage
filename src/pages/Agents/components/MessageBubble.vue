@@ -42,11 +42,40 @@ const html = computed(() =>
   props.role === 'assistant' ? renderMarkdown(displayText.value) : '',
 )
 
+// 首 token/工具卡片到达前的「正在思考」占位（Kimi 式，避免空气泡像卡死）
+const thinking = computed(
+  () => props.streaming && !props.content && !props.toolCalls?.length,
+)
+
 const userInitial = computed(() => auth.user?.username?.charAt(0).toUpperCase() || 'U')
+
+// ---- 复制（hover 操作条，http 环境 navigator.clipboard 不可用时回退 execCommand） ----
+const copied = ref(false)
+let copiedTimer: ReturnType<typeof setTimeout> | null = null
+
+const copyContent = async () => {
+  const text = props.content
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    ta.remove()
+  }
+  copied.value = true
+  if (copiedTimer) clearTimeout(copiedTimer)
+  copiedTimer = setTimeout(() => (copied.value = false), 1500)
+}
 </script>
 
 <template>
-  <div :class="['flex gap-2.5', role === 'user' ? 'flex-row-reverse' : '']">
+  <div :class="['group flex gap-2.5', role === 'user' ? 'flex-row-reverse' : '']">
     <!-- 头像 -->
     <div
       class="w-[30px] h-[30px] rounded-[9px] grid place-items-center shrink-0 text-xs font-semibold"
@@ -89,26 +118,55 @@ const userInitial = computed(() => auth.user?.username?.charAt(0).toUpperCase() 
         class="py-0.5"
         :class="hasError ? 'rounded-xl border border-danger/40 bg-danger/5 px-3.5 py-2.5' : ''"
       >
-        <!-- eslint-disable vue/no-v-html -->
+        <!-- 正在思考：三点弹跳占位 -->
         <div
-          class="markdown-content chat-md text-sm"
-          v-html="html"
-        />
-        <!-- eslint-enable vue/no-v-html -->
+          v-if="thinking"
+          class="flex items-center gap-1.5 h-6 text-muted"
+        >
+          <span class="thinking-dot w-[6px] h-[6px] rounded-full bg-current" />
+          <span class="thinking-dot d2 w-[6px] h-[6px] rounded-full bg-current" />
+          <span class="thinking-dot d3 w-[6px] h-[6px] rounded-full bg-current" />
+        </div>
+        <template v-else>
+          <!-- eslint-disable vue/no-v-html -->
+          <div
+            class="markdown-content chat-md text-sm"
+            v-html="html"
+          />
+          <!-- eslint-enable vue/no-v-html -->
 
-        <!-- 流式光标 -->
-        <span
-          v-if="streaming"
-          class="inline-block w-[8px] h-[15px] bg-accent animate-pulse align-text-bottom"
-        />
+          <!-- 流式光标 -->
+          <span
+            v-if="streaming"
+            class="inline-block w-[8px] h-[15px] bg-accent animate-pulse align-text-bottom"
+          />
+        </template>
       </div>
 
-      <!-- token 消耗（存量历史数据为 null 时不展示） -->
+      <!-- 操作条：复制 hover 显现（流式中不给复制，拿到的是半截内容）；token 常显 -->
       <div
-        v-if="role === 'assistant' && totalTokens != null && !streaming"
-        class="text-muted/70 text-xs mt-1.5"
+        v-if="!streaming && (content || totalTokens != null)"
+        class="flex items-center gap-2 mt-1.5"
+        :class="role === 'user' ? 'justify-end' : ''"
       >
-        {{ totalTokens.toLocaleString() }} tokens
+        <button
+          v-if="content"
+          class="w-6 h-6 rounded-md grid place-items-center text-muted/70 hover:text-fg hover:bg-fg/5 transition-all opacity-0 group-hover:opacity-100"
+          :class="copied ? '!opacity-100 text-success hover:text-success' : ''"
+          :title="copied ? '已复制' : '复制'"
+          @click="copyContent"
+        >
+          <AppIcon
+            :name="copied ? 'check' : 'copy'"
+            :size="13"
+          />
+        </button>
+        <span
+          v-if="role === 'assistant' && totalTokens != null"
+          class="text-muted/70 text-xs"
+        >
+          {{ totalTokens.toLocaleString() }} tokens
+        </span>
       </div>
     </div>
   </div>

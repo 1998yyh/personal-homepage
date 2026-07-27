@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import agentsApi from '../../lib/agents-api'
@@ -65,6 +65,7 @@ const selectConversation = (id: string) => {
   if (stream.streaming.value) stream.abort() // 切换会话断流
   isDraft.value = false
   selectedId.value = id
+  userNearBottom.value = true // 切会话后重新跟随吸底
 }
 
 // ---- 新建会话：懒创建，首条消息发出时才 POST（设计文档 §7） ----
@@ -72,6 +73,8 @@ const startDraft = () => {
   if (stream.streaming.value) stream.abort()
   selectedId.value = null
   isDraft.value = true
+  userNearBottom.value = true
+  focusInput()
 }
 
 // ---- 消息历史（DESC 分页，向上翻页 prepend） ----
@@ -109,14 +112,36 @@ const messagesEl = ref<HTMLElement | null>(null)
 /** 建会话等发送前置步骤的错误（流内错误走 stream.errorMessage） */
 const sendError = ref<string | null>(null)
 
-const scrollToBottom = () => {
+// 智能滚动（Kimi 式）：用户在底部附近时新内容才吸底，上翻看历史不被拽回去
+const userNearBottom = ref(true)
+
+const scrollToBottom = (force = false) => {
+  if (force) userNearBottom.value = true
   nextTick(() => {
-    if (messagesEl.value) messagesEl.value.scrollTop = messagesEl.value.scrollHeight
+    const el = messagesEl.value
+    if (el && userNearBottom.value) el.scrollTop = el.scrollHeight
   })
 }
 
-// 新消息/流式输出时自动滚底
-watch([() => grouped.value.length, () => stream.streamingMessage.value?.text], scrollToBottom)
+const handleMessagesScroll = () => {
+  const el = messagesEl.value
+  if (!el) return
+  userNearBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+}
+
+// 新消息/流式输出时自动滚底（scrollToBottom 不能直接当回调——watch 会把 newValue 塞进 force 参数）
+watch([() => grouped.value.length, () => stream.streamingMessage.value?.text], () => scrollToBottom())
+
+const focusInput = () => nextTick(() => inputEl.value?.focus())
+
+onMounted(focusInput)
+
+// 草稿态建议问题（Kimi 首页式引导，点击填入输入框）
+const suggestions = ['你能做什么？', '介绍一下你的能力', '帮我出个主意']
+const applySuggestion = (text: string) => {
+  input.value = text
+  focusInput()
+}
 
 // textarea 自动增高（上限 180px，对齐设计稿 composer）
 watch(input, () => {
@@ -150,7 +175,7 @@ const sendMessage = async () => {
 
   input.value = ''
   pendingUserMessage.value = content
-  scrollToBottom()
+  scrollToBottom(true) // 自己发的消息必须可见，强制吸底
 
   await stream.send(convId, content, () => {
     // 流正常结束：消息列表归位后清理临时状态（历史里已有 user+assistant）
@@ -167,6 +192,7 @@ const sendMessage = async () => {
   if (stream.status.value !== 'error') {
     pendingUserMessage.value = null
   }
+  focusInput() // 发完把焦点还给输入框，接着聊
 }
 
 // 停止生成：断流后拉一次消息列表，与后端断连时的落库状态对齐
@@ -196,6 +222,7 @@ const retrySend = async () => {
   if (stream.status.value !== 'error') {
     pendingUserMessage.value = null
   }
+  focusInput()
 }
 
 // ---- 删除会话：确认 → 断流 → 删除 → 降级选中（设计文档 §7） ----
@@ -271,99 +298,132 @@ onBeforeUnmount(() => stream.abort())
           >该 Agent 已停用</span>
         </header>
 
-        <!-- 消息区 -->
-        <div
-          ref="messagesEl"
-          class="flex-1 overflow-y-auto"
-        >
-          <div class="max-w-[760px] mx-auto px-5 py-6 flex flex-col gap-[22px] min-h-full">
-            <!-- 空状态 -->
-            <div
-              v-if="!activeConvId && !isDraft"
-              class="flex-1 flex flex-col items-center justify-center text-center"
-            >
-              <div class="w-14 h-14 rounded-2xl bg-accent text-white grid place-items-center mb-4">
-                <AppIcon
-                  name="bot"
-                  :size="26"
-                />
-              </div>
-              <h2 class="font-display font-bold text-lg text-fg mb-1.5">
-                开始和 {{ agent?.name ?? 'Agent' }} 对话
-              </h2>
-              <p class="text-muted text-sm mb-6">
-                还没有会话，开始一个新的吧
-              </p>
-              <button
-                class="od-btn od-btn-primary"
-                @click="startDraft"
+        <!-- 消息区（relative 容器：挂「回到底部」悬浮钮） -->
+        <div class="relative flex-1 min-h-0">
+          <div
+            ref="messagesEl"
+            class="h-full overflow-y-auto"
+            @scroll.passive="handleMessagesScroll"
+          >
+            <div class="max-w-[760px] mx-auto px-5 py-6 flex flex-col gap-[22px] min-h-full">
+              <!-- 空态/草稿态欢迎屏（Kimi 首页式引导） -->
+              <div
+                v-if="(isDraft || !activeConvId) && !pendingUserMessage && !stream.streamingMessage.value"
+                class="flex-1 flex flex-col items-center justify-center text-center"
               >
-                <AppIcon
-                  name="plus"
-                  :size="16"
+                <div class="w-14 h-14 rounded-2xl bg-accent text-white grid place-items-center mb-4">
+                  <AppIcon
+                    name="bot"
+                    :size="26"
+                  />
+                </div>
+                <h2 class="font-display font-bold text-lg text-fg mb-1.5">
+                  开始和 {{ agent?.name ?? 'Agent' }} 对话
+                </h2>
+                <p class="text-muted text-sm mb-6 max-w-[420px]">
+                  {{ isDraft ? (agent?.description || '输入你的问题，Agent 将为你解答') : '还没有会话，开始一个新的吧' }}
+                </p>
+                <!-- 草稿态：建议问题 chips，点击填入输入框 -->
+                <div
+                  v-if="isDraft"
+                  class="flex flex-wrap items-center justify-center gap-2"
+                >
+                  <button
+                    v-for="s in suggestions"
+                    :key="s"
+                    class="od-chip cursor-pointer"
+                    @click="applySuggestion(s)"
+                  >
+                    {{ s }}
+                  </button>
+                </div>
+                <button
+                  v-else
+                  class="od-btn od-btn-primary"
+                  @click="startDraft"
+                >
+                  <AppIcon
+                    name="plus"
+                    :size="16"
+                  />
+                  新建会话
+                </button>
+              </div>
+
+              <template v-else>
+                <!-- 向上翻页 -->
+                <div
+                  v-if="msgHasMore"
+                  class="text-center"
+                >
+                  <button
+                    class="text-muted hover:text-fg text-xs transition-colors disabled:opacity-50"
+                    :disabled="msgFetchingMore"
+                    @click="fetchMoreMsgs()"
+                  >
+                    {{ msgFetchingMore ? '加载中...' : '加载更早的消息' }}
+                  </button>
+                </div>
+
+                <!-- 历史消息（归组渲染，tool 消息已被配对进卡片） -->
+                <MessageBubble
+                  v-for="msg in grouped"
+                  :key="msg.id"
+                  :role="msg.role"
+                  :content="msg.content"
+                  :tool-calls="msg.toolCalls"
+                  :total-tokens="msg.totalTokens"
                 />
-                新建会话
-              </button>
+
+                <!-- 发送中的 user 消息（乐观展示） -->
+                <MessageBubble
+                  v-if="pendingUserMessage"
+                  class="anim-rise"
+                  role="user"
+                  :content="pendingUserMessage"
+                />
+
+                <!-- 流式临时 assistant 气泡 -->
+                <MessageBubble
+                  v-if="stream.streamingMessage.value"
+                  class="anim-rise"
+                  role="assistant"
+                  :content="stream.streamingMessage.value.text"
+                  :tool-calls="stream.streamingMessage.value.toolCalls"
+                  :total-tokens="stream.streamingMessage.value.totalTokens"
+                  :streaming="stream.streaming.value"
+                  :has-error="stream.status.value === 'error'"
+                />
+
+                <!-- 错误与重试 -->
+                <div
+                  v-if="stream.status.value === 'error'"
+                  class="flex items-center gap-3 justify-center"
+                >
+                  <span class="od-error !py-2 text-xs">{{ stream.errorMessage.value ?? '执行异常，请重试' }}</span>
+                  <button
+                    class="od-btn od-btn-soft !py-1.5 !px-3 text-xs"
+                    @click="retrySend"
+                  >
+                    重试
+                  </button>
+                </div>
+              </template>
             </div>
-
-            <template v-else>
-              <!-- 向上翻页 -->
-              <div
-                v-if="msgHasMore"
-                class="text-center"
-              >
-                <button
-                  class="text-muted hover:text-fg text-xs transition-colors disabled:opacity-50"
-                  :disabled="msgFetchingMore"
-                  @click="fetchMoreMsgs()"
-                >
-                  {{ msgFetchingMore ? '加载中...' : '加载更早的消息' }}
-                </button>
-              </div>
-
-              <!-- 历史消息（归组渲染，tool 消息已被配对进卡片） -->
-              <MessageBubble
-                v-for="msg in grouped"
-                :key="msg.id"
-                :role="msg.role"
-                :content="msg.content"
-                :tool-calls="msg.toolCalls"
-                :total-tokens="msg.totalTokens"
-              />
-
-              <!-- 发送中的 user 消息（乐观展示） -->
-              <MessageBubble
-                v-if="pendingUserMessage"
-                role="user"
-                :content="pendingUserMessage"
-              />
-
-              <!-- 流式临时 assistant 气泡 -->
-              <MessageBubble
-                v-if="stream.streamingMessage.value"
-                role="assistant"
-                :content="stream.streamingMessage.value.text"
-                :tool-calls="stream.streamingMessage.value.toolCalls"
-                :total-tokens="stream.streamingMessage.value.totalTokens"
-                :streaming="stream.streaming.value"
-                :has-error="stream.status.value === 'error'"
-              />
-
-              <!-- 错误与重试 -->
-              <div
-                v-if="stream.status.value === 'error'"
-                class="flex items-center gap-3 justify-center"
-              >
-                <span class="od-error !py-2 text-xs">{{ stream.errorMessage.value ?? '执行异常，请重试' }}</span>
-                <button
-                  class="od-btn od-btn-soft !py-1.5 !px-3 text-xs"
-                  @click="retrySend"
-                >
-                  重试
-                </button>
-              </div>
-            </template>
           </div>
+
+          <!-- 回到底部悬浮钮（上翻后出现，Kimi 式） -->
+          <button
+            v-show="!userNearBottom"
+            class="absolute bottom-4 left-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-surface border border-border shadow-lift grid place-items-center text-muted hover:text-fg transition-colors"
+            title="回到底部"
+            @click="scrollToBottom(true)"
+          >
+            <AppIcon
+              name="chevron-down"
+              :size="16"
+            />
+          </button>
         </div>
 
         <!-- 输入区（composer-box，对齐设计稿） -->
@@ -381,12 +441,11 @@ onBeforeUnmount(() => stream.abort())
                 v-model="input"
                 rows="1"
                 class="w-full bg-transparent resize-none outline-none px-4 pt-3.5 text-sm text-fg placeholder:text-muted/70 max-h-[180px]"
-                :placeholder="agentDisabled ? '该 Agent 已停用，无法发送' : '给 Agent 发送消息...'"
+                :placeholder="agentDisabled ? '该 Agent 已停用，无法发送' : '输入消息…（Enter 发送，Shift+Enter 换行）'"
                 :disabled="stream.streaming.value || agentDisabled || (!activeConvId && !isDraft)"
                 @keydown.enter.exact.prevent="!$event.isComposing && sendMessage()"
               />
               <div class="flex items-center px-3 pb-3 pt-1.5">
-                <span class="text-muted/70 text-[11.5px]">Enter 发送 · Shift+Enter 换行</span>
                 <!-- 流式中：停止按钮 -->
                 <button
                   v-if="stream.streaming.value"

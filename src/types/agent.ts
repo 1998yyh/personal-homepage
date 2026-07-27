@@ -48,8 +48,10 @@ export interface AgentPayload {
 
 export interface Conversation {
   id: string
-  agentId: string
+  /** 后端字段名是 agentConfigId（不是 agentId） */
+  agentConfigId: string
   title: string | null
+  status: 'active' | string
   createdAt: string
   updatedAt: string
 }

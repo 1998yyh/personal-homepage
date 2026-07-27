@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import type { Conversation } from '../../../types/agent'
 import AppIcon from '../../../components/AppIcon.vue'
 
-defineProps<{
+const props = defineProps<{
   conversations: Conversation[]
   /** null 表示草稿态（新建未发送） */
   selectedId: string | null
@@ -18,11 +19,19 @@ const emit = defineEmits<{
   loadMore: []
   remove: [conversation: Conversation]
 }>()
+
+// 会话搜索（纯前端过滤，XY·Agent 同款；量小不需要后端支持）
+const keyword = ref('')
+const filtered = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  if (!kw) return props.conversations
+  return props.conversations.filter((c) => (c.title || '未命名会话').toLowerCase().includes(kw))
+})
 </script>
 
 <template>
   <!-- 头部：新建对话 -->
-  <div class="p-3 shrink-0">
+  <div class="p-3 shrink-0 flex flex-col gap-2">
     <button
       class="od-btn od-btn-primary od-btn-block"
       @click="emit('newConversation')"
@@ -33,6 +42,24 @@ const emit = defineEmits<{
       />
       新对话
     </button>
+
+    <!-- 搜索会话 -->
+    <div
+      v-if="conversations.length"
+      class="relative"
+    >
+      <AppIcon
+        name="search"
+        :size="14"
+        class="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted/70 pointer-events-none"
+      />
+      <input
+        v-model="keyword"
+        type="text"
+        class="od-input !pl-8 !py-1.5 text-[13px]"
+        placeholder="搜索会话..."
+      >
+    </div>
   </div>
 
   <!-- 会话列表 -->
@@ -58,9 +85,16 @@ const emit = defineEmits<{
       加载中...
     </div>
 
+    <div
+      v-else-if="keyword.trim() && !filtered.length"
+      class="text-muted text-sm text-center py-8"
+    >
+      无匹配会话
+    </div>
+
     <template v-else>
       <div
-        v-for="conv in conversations"
+        v-for="conv in filtered"
         :key="conv.id"
         class="group relative flex items-center justify-between gap-2 px-3 py-2.5 rounded-[10px] text-[13.5px] cursor-pointer transition-colors"
         :class="conv.id === selectedId
@@ -82,7 +116,7 @@ const emit = defineEmits<{
       </div>
 
       <button
-        v-if="hasMore"
+        v-if="hasMore && !keyword.trim()"
         class="w-full py-2 text-muted hover:text-fg text-xs transition-colors disabled:opacity-50"
         :disabled="isFetchingMore"
         @click="emit('loadMore')"
