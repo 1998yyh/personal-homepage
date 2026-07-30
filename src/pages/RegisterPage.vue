@@ -256,6 +256,7 @@ const handleSubmit = async () => {
           <button
             type="button"
             class="pwd-toggle"
+            tabindex="-1"
             :aria-label="showPassword ? '隐藏密码' : '显示密码'"
             @click="togglePassword"
           >
