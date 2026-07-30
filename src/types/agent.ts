@@ -23,6 +23,7 @@ export interface Agent {
   provider: AgentProvider
   model: string
   apiKeyMasked: string
+  baseUrl: string | null
   systemPrompt: string | null
   maxTokens: number
   maxIterations: number
@@ -40,6 +41,7 @@ export interface AgentPayload {
   provider: AgentProvider
   model: string
   apiKey?: string
+  baseUrl?: string
   systemPrompt?: string
   maxTokens?: number
   maxIterations?: number

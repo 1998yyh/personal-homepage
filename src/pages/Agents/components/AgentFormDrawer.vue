@@ -36,6 +36,7 @@ const form = reactive({
   provider: 'anthropic' as AgentProvider,
   model: '',
   apiKey: '',
+  baseUrl: '',
   systemPrompt: '',
   maxTokens: 4096,
   maxIterations: 10,
@@ -56,6 +57,7 @@ watch(
     form.provider = agent.provider
     form.model = agent.model
     form.apiKey = ''
+    form.baseUrl = agent.baseUrl ?? ''
     form.systemPrompt = agent.systemPrompt ?? ''
     form.maxTokens = agent.maxTokens
     form.maxIterations = agent.maxIterations
@@ -113,6 +115,8 @@ const handleSubmit = () => {
   }
   // 编辑时 apiKey 留空 = 保持原值，不传该字段
   if (form.apiKey.trim()) payload.apiKey = form.apiKey.trim()
+  // 自定义网关地址（可选），留空不传
+  if (form.baseUrl.trim()) payload.baseUrl = form.baseUrl.trim()
 
   emit('submit', payload)
 }
@@ -228,6 +232,19 @@ const handleSubmit = () => {
         </div>
         <p class="text-muted text-xs mt-1.5">
           仅保存在你自己的账户下，请求时通过 Authorization 头发送
+        </p>
+      </div>
+
+      <div>
+        <label class="od-label">Base URL（可选）</label>
+        <input
+          v-model="form.baseUrl"
+          class="od-input"
+          autocomplete="off"
+          placeholder="如 https://gateway.example.com/v1，留空用官方地址"
+        >
+        <p class="text-muted text-xs mt-1.5">
+          自定义 API 网关/代理地址，留空则走供应商默认地址
         </p>
       </div>
 
