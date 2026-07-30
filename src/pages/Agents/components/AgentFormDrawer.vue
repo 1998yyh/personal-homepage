@@ -147,7 +147,7 @@ const handleSubmit = () => {
     <!-- 表单主体（可滚动） -->
     <form
       id="agent-form"
-      class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4"
+      class="flex-1 min-h-0 overflow-y-auto px-6 py-5 flex flex-col gap-4"
       @submit.prevent="handleSubmit"
     >
       <div>
