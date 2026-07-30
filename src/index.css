@@ -119,6 +119,19 @@
   }
   .od-input::placeholder { color: color-mix(in oklch, var(--muted) 70%, transparent); }
   .od-input:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent); }
+  /* 原生 select 默认箭头贴死右缘还会被圆角切，抹掉换自定义 chevron 内缩居中 */
+  select.od-input {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 38px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888d99' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 13px center;
+    background-size: 15px;
+  }
+  [data-theme="dark"] select.od-input {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0ad' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
   .od-error {
     padding: 10px 14px; border-radius: 12px; font-size: 13.5px;
     background: color-mix(in oklch, var(--danger) 10%, var(--surface));
