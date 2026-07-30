@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { renderMarkdown } from '../../../lib/markdown'
 import { useAuthStore } from '../../../stores/auth'
 import type { GroupedToolCall } from '../utils/groupMessages'
@@ -19,24 +19,47 @@ const props = defineProps<{
 
 const auth = useAuthStore()
 
-// 流式渲染：props.content 每个 delta 都变，用 rAF 节流重渲 markdown（设计文档 §5）
+// 流式渲染：props.content 每个 delta 都变。markdown 无法安全增量渲染（代码围栏会改变后文
+// 解析），只能整段重解析——若每个 delta / 每帧都渲一次，长回答下会 O(n²) 卡顿。
+// 故按时间片节流（~90ms ≈ 11fps，肉眼已顺滑），大幅减少全量重解析次数；
+// 流结束时立即 flush 出最终全文，不留半截。
+const RENDER_INTERVAL = 90
 const displayText = ref(props.content)
-let rafId: number | null = null
+let timer: ReturnType<typeof setTimeout> | null = null
+
+const flush = () => {
+  timer = null
+  displayText.value = props.content
+}
 
 watch(
   () => props.content,
   (text) => {
     if (!props.streaming) {
+      // 非流式（历史消息 / 流已结束）：同步出全文
+      if (timer) { clearTimeout(timer); timer = null }
       displayText.value = text
       return
     }
-    if (rafId != null) return
-    rafId = requestAnimationFrame(() => {
-      displayText.value = props.content
-      rafId = null
-    })
+    if (timer != null) return // 本时间片内已排程，等它触发时取最新全文
+    timer = setTimeout(flush, RENDER_INTERVAL)
   },
 )
+
+// streaming 由 true → false 时（流结束）立即补渲最终全文，避免停在上一个时间片的半截内容
+watch(
+  () => props.streaming,
+  (isStreaming) => {
+    if (!isStreaming) {
+      if (timer) { clearTimeout(timer); timer = null }
+      displayText.value = props.content
+    }
+  },
+)
+
+onBeforeUnmount(() => {
+  if (timer) clearTimeout(timer)
+})
 
 const html = computed(() =>
   props.role === 'assistant' ? renderMarkdown(displayText.value) : '',
