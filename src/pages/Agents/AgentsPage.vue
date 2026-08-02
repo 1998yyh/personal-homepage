@@ -107,6 +107,58 @@ const TOOL_LABELS: Record<string, string> = {
         </button>
       </div>
 
+      <!-- 工具库入口：MCP / Skills 管理页 -->
+      <div class="grid grid-cols-2 gap-[18px] max-sm:grid-cols-1 mb-7">
+        <router-link
+          to="/mcp-servers"
+          class="od-card p-4 flex items-center gap-3.5 transition-shadow hover:shadow-lift group"
+        >
+          <div class="w-10 h-10 rounded-xl bg-accent-soft text-accent-strong grid place-items-center shrink-0">
+            <AppIcon
+              name="plug"
+              :size="19"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-fg font-medium text-sm">
+              MCP 工具库
+            </p>
+            <p class="text-muted text-xs mt-0.5 truncate">
+              管理可连接的 MCP Server
+            </p>
+          </div>
+          <AppIcon
+            name="arrow-right"
+            :size="16"
+            class="text-muted transition-transform group-hover:translate-x-0.5 shrink-0"
+          />
+        </router-link>
+        <router-link
+          to="/skills"
+          class="od-card p-4 flex items-center gap-3.5 transition-shadow hover:shadow-lift group"
+        >
+          <div class="w-10 h-10 rounded-xl bg-accent-soft text-accent-strong grid place-items-center shrink-0">
+            <AppIcon
+              name="zap"
+              :size="19"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-fg font-medium text-sm">
+              Skills 库
+            </p>
+            <p class="text-muted text-xs mt-0.5 truncate">
+              管理可复用的子 Agent 工具
+            </p>
+          </div>
+          <AppIcon
+            name="arrow-right"
+            :size="16"
+            class="text-muted transition-transform group-hover:translate-x-0.5 shrink-0"
+          />
+        </router-link>
+      </div>
+
       <!-- 加载中 -->
       <div
         v-if="isLoading"

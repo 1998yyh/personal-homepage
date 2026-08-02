@@ -12,6 +12,8 @@ const router = createRouter({
     { path: '/dev-tools', component: () => import('../pages/DevTools/DevToolsPage.vue') },
     { path: '/agents', component: () => import('../pages/Agents/AgentsPage.vue') },
     { path: '/agents/:id', component: () => import('../pages/Agents/AgentChatPage.vue') },
+    { path: '/mcp-servers', component: () => import('../pages/McpServers/McpServersPage.vue') },
+    { path: '/skills', component: () => import('../pages/Skills/SkillsPage.vue') },
     { path: '/daily-reports', redirect: '/ai-news' },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
