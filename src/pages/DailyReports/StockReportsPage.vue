@@ -6,6 +6,7 @@ import type { DailyReport } from '../../types/daily-report'
 import ReportList from './components/ReportList.vue'
 import ReportContent from './components/ReportContent.vue'
 import Navbar from '../../components/Navbar.vue'
+import AppIcon from '../../components/AppIcon.vue'
 
 const selectedReport = ref<DailyReport | null>(null)
 
@@ -51,6 +52,35 @@ watch(
           A股 / 港股 每日市场精选，复盘纪律从每天十分钟开始。
         </p>
       </div>
+
+      <!-- B 信号筛选入口 -->
+      <router-link
+        to="/stock-signals"
+        class="od-card p-4 mb-6 flex items-center gap-3.5 transition-shadow hover:shadow-lift group"
+      >
+        <div
+          class="w-10 h-10 rounded-xl grid place-items-center shrink-0 text-white"
+          style="background: var(--domain)"
+        >
+          <AppIcon
+            name="trending-up"
+            :size="19"
+          />
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-fg font-medium text-sm">
+            今日 B 信号筛选
+          </p>
+          <p class="text-muted text-xs mt-0.5 truncate">
+            扫描沪深主板非 ST 的新浪多空信号，服务端缓存、历史可查
+          </p>
+        </div>
+        <AppIcon
+          name="arrow-right"
+          :size="16"
+          class="text-muted transition-transform group-hover:translate-x-0.5 shrink-0"
+        />
+      </router-link>
 
       <div class="flex gap-6 h-[calc(100vh-320px)] min-h-[480px]">
         <!-- 左侧：日报列表 -->
