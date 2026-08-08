@@ -65,12 +65,6 @@ const openDelete = (agent: Agent) => {
   deletingAgent.value = agent
 }
 
-const PROVIDER_LABELS: Record<string, string> = {
-  anthropic: 'Anthropic',
-  openai: 'OpenAI',
-  deepseek: 'DeepSeek',
-}
-
 const TOOL_LABELS: Record<string, string> = {
   web_search: '联网搜索',
   calculator: '计算器',
@@ -220,7 +214,7 @@ const TOOL_LABELS: Record<string, string> = {
                 {{ agent.name }}
               </h3>
               <p class="text-muted text-xs truncate mt-0.5">
-                {{ agent.model }}
+                {{ agent.modelName }}
               </p>
             </div>
           </div>
@@ -232,7 +226,7 @@ const TOOL_LABELS: Record<string, string> = {
           <!-- 标签 -->
           <div class="flex flex-wrap gap-2">
             <span class="px-2 py-1 rounded-md bg-accent-soft text-accent-strong text-xs font-medium">
-              {{ PROVIDER_LABELS[agent.provider] ?? agent.provider }}
+              {{ agent.channelName ?? '未知渠道' }}
             </span>
             <span
               v-for="tool in agent.enabledTools"

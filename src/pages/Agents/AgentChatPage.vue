@@ -289,7 +289,7 @@ onBeforeUnmount(() => stream.abort())
               {{ agent?.name ?? '...' }}
             </div>
             <div class="text-muted text-xs truncate">
-              {{ agent?.model }}
+              {{ agent?.modelName }}
             </div>
           </div>
           <span
