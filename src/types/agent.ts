@@ -1,7 +1,6 @@
 // Agent 模块共享类型（对齐后端 tuanzi-server-base 的 agents 模块契约）
 
-/** LLM 供应商（deepseek 后端暂未支持，前端表单禁用） */
-export type AgentProvider = 'anthropic' | 'openai' | 'deepseek'
+import type { ApiFormat } from './ai-generation'
 
 /** 内置工具名（后端 tool-registry 注册，无列表接口，前端硬编码） */
 export type BuiltinToolName = 'web_search' | 'calculator'
@@ -15,15 +14,19 @@ export interface McpServerConfig {
   url?: string
 }
 
-/** Agent 配置（响应形状：apiKey 脱敏为 apiKeyMasked） */
+/** Agent 配置（对话模型引用 ai-channels 渠道；后端返回渠道名/格式供展示） */
 export interface Agent {
   id: string
   name: string
   description: string | null
-  provider: AgentProvider
-  model: string
-  apiKeyMasked: string
-  baseUrl: string | null
+  /** 对话模型所属渠道（ai-channels.id） */
+  channelId: string
+  /** 渠道名称（展示用，渠道异常时为 null） */
+  channelName: string | null
+  /** 渠道 API 格式（展示用） */
+  apiFormat: ApiFormat | null
+  /** 渠道下的对话模型名（capability=chat） */
+  modelName: string
   systemPrompt: string | null
   maxTokens: number
   maxIterations: number
@@ -34,14 +37,12 @@ export interface Agent {
   updatedAt: string
 }
 
-/** 创建/更新 Agent 的提交载荷（更新时 apiKey 不传表示保持原值） */
+/** 创建/更新 Agent 的提交载荷（连接凭据在渠道侧维护，这里只引用） */
 export interface AgentPayload {
   name: string
   description?: string
-  provider: AgentProvider
-  model: string
-  apiKey?: string
-  baseUrl?: string
+  channelId: string
+  modelName: string
   systemPrompt?: string
   maxTokens?: number
   maxIterations?: number
