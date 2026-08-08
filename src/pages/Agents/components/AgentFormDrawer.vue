@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import type { Agent, AgentPayload, AgentProvider, BuiltinToolName } from '../../../types/agent'
+import { useQuery } from '@tanstack/vue-query'
+import type { Agent, AgentPayload, BuiltinToolName } from '../../../types/agent'
+import { channelsApi } from '../../../lib/channels-api'
 import AppIcon from '../../../components/AppIcon.vue'
 
 const props = defineProps<{
@@ -23,20 +25,11 @@ const BUILTIN_TOOLS: Array<{ name: BuiltinToolName; label: string; desc: string 
   { name: 'calculator', label: '计算器', desc: '精确数学求值，弥补大模型算数弱项' },
 ]
 
-// 模型 placeholder 随 provider 联动（自由文本输入，不硬编码模型名单——设计文档 §6）
-const MODEL_PLACEHOLDERS: Record<AgentProvider, string> = {
-  anthropic: '如 claude-sonnet-5',
-  openai: '如 gpt-5',
-  deepseek: '暂未支持',
-}
-
 const form = reactive({
   name: '',
   description: '',
-  provider: 'anthropic' as AgentProvider,
-  model: '',
-  apiKey: '',
-  baseUrl: '',
+  channelId: '',
+  modelName: '',
   systemPrompt: '',
   maxTokens: 4096,
   maxIterations: 10,
@@ -44,26 +37,60 @@ const form = reactive({
 })
 
 const showAdvanced = ref(false)
-const showApiKey = ref(false)
 const localError = ref<string | null>(null)
 
-// 编辑模式回填（apiKey 不回填，留空表示不修改——后端契约）
+// 渠道列表（与画布生成节点同一 queryKey，共享缓存）
+const { data: channels } = useQuery({
+  queryKey: ['ai-channels'],
+  queryFn: () => channelsApi.list(),
+})
+
+/** 可选渠道：启用中且含对话模型 */
+const chatChannels = computed(() =>
+  (channels.value ?? []).filter(
+    (c) => c.isActive && c.models.some((m) => m.capability === 'chat'),
+  ),
+)
+
+/** 当前选中渠道下的对话模型 */
+const chatModels = computed(
+  () =>
+    chatChannels.value
+      .find((c) => c.id === form.channelId)
+      ?.models.filter((m) => m.capability === 'chat') ?? [],
+)
+
+/** 编辑时原渠道已停用/删除的兜底展示 */
+const missingChannel = computed(
+  () =>
+    isEdit.value &&
+    form.channelId &&
+    !chatChannels.value.some((c) => c.id === form.channelId),
+)
+
+// 编辑模式回填（连接信息来自渠道引用，不回填任何凭据）
 watch(
   () => props.agent,
   (agent) => {
     if (!agent) return
     form.name = agent.name
     form.description = agent.description ?? ''
-    form.provider = agent.provider
-    form.model = agent.model
-    form.apiKey = ''
-    form.baseUrl = agent.baseUrl ?? ''
+    form.channelId = agent.channelId
+    form.modelName = agent.modelName
     form.systemPrompt = agent.systemPrompt ?? ''
     form.maxTokens = agent.maxTokens
     form.maxIterations = agent.maxIterations
     form.enabledTools = [...agent.enabledTools]
   },
   { immediate: true },
+)
+
+// 手动切换渠道时清空模型（旧选择多半不属于新渠道；回填时 prev 为空串不触发）
+watch(
+  () => form.channelId,
+  (next, prev) => {
+    if (prev && next !== prev) form.modelName = ''
+  },
 )
 
 const toggleTool = (name: string) => {
@@ -85,12 +112,12 @@ const handleSubmit = () => {
     localError.value = '请填写 Agent 名称'
     return
   }
-  if (!form.model.trim()) {
-    localError.value = '请填写模型名称'
+  if (!form.channelId) {
+    localError.value = '请选择渠道'
     return
   }
-  if (!isEdit.value && !form.apiKey.trim()) {
-    localError.value = '请填写 API Key'
+  if (!form.modelName) {
+    localError.value = '请选择对话模型'
     return
   }
   // v-model.number 在输入被清空/非法时会留下空字符串，这里兜底校验
@@ -103,22 +130,16 @@ const handleSubmit = () => {
     return
   }
 
-  const payload: AgentPayload = {
+  emit('submit', {
     name: form.name.trim(),
     description: form.description.trim() || undefined,
-    provider: form.provider,
-    model: form.model.trim(),
+    channelId: form.channelId,
+    modelName: form.modelName,
     systemPrompt: form.systemPrompt.trim() || undefined,
     maxTokens: form.maxTokens,
     maxIterations: form.maxIterations,
     enabledTools: form.enabledTools,
-  }
-  // 编辑时 apiKey 留空 = 保持原值，不传该字段
-  if (form.apiKey.trim()) payload.apiKey = form.apiKey.trim()
-  // 自定义网关地址（可选），留空不传
-  if (form.baseUrl.trim()) payload.baseUrl = form.baseUrl.trim()
-
-  emit('submit', payload)
+  })
 }
 </script>
 
@@ -174,78 +195,83 @@ const handleSubmit = () => {
         />
       </div>
 
-      <div class="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
-        <div>
-          <label class="od-label">供应商 *</label>
-          <select
-            v-model="form.provider"
-            class="od-input"
-          >
-            <option value="anthropic">
-              Anthropic
-            </option>
-            <option value="openai">
-              OpenAI
-            </option>
-            <option
-              value="deepseek"
-              disabled
+      <template v-if="chatChannels.length">
+        <div class="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
+          <div>
+            <label class="od-label">渠道 *</label>
+            <select
+              v-model="form.channelId"
+              class="od-input"
             >
-              DeepSeek（暂未支持）
-            </option>
-          </select>
+              <option
+                value=""
+                disabled
+              >
+                选择渠道
+              </option>
+              <option
+                v-for="c in chatChannels"
+                :key="c.id"
+                :value="c.id"
+              >
+                {{ c.name }}
+              </option>
+              <!-- 编辑时原渠道已停用/删除的兜底项 -->
+              <option
+                v-if="missingChannel"
+                :value="form.channelId"
+              >
+                {{ agent?.channelName ?? '原渠道' }}（已停用或删除）
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="od-label">对话模型 *</label>
+            <select
+              v-model="form.modelName"
+              class="od-input"
+              :disabled="!form.channelId"
+            >
+              <option
+                value=""
+                disabled
+              >
+                {{ form.channelId ? '选择模型' : '先选择渠道' }}
+              </option>
+              <option
+                v-for="m in chatModels"
+                :key="m.name"
+                :value="m.name"
+              >
+                {{ m.name }}
+              </option>
+              <!-- 编辑时原模型已被移出渠道的兜底项 -->
+              <option
+                v-if="isEdit && form.modelName && !chatModels.some((m) => m.name === form.modelName)"
+                :value="form.modelName"
+              >
+                {{ form.modelName }}（已不在渠道中）
+              </option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label class="od-label">模型 *</label>
-          <input
-            v-model="form.model"
-            class="od-input"
-            autocomplete="off"
-            :placeholder="MODEL_PLACEHOLDERS[form.provider]"
-          >
-        </div>
-      </div>
-
-      <div>
-        <label class="od-label">
-          API Key {{ isEdit ? '（留空则不修改）' : '*' }}
-        </label>
-        <div class="pwd-wrap">
-          <input
-            v-model="form.apiKey"
-            :type="showApiKey ? 'text' : 'password'"
-            class="od-input"
-            autocomplete="new-password"
-            :placeholder="isEdit ? `当前：${agent?.apiKeyMasked}` : 'sk-...'"
-          >
-          <button
-            type="button"
-            class="pwd-toggle"
-            :aria-label="showApiKey ? '隐藏 API Key' : '显示 API Key'"
-            @click="showApiKey = !showApiKey"
-          >
-            <AppIcon
-              :name="showApiKey ? 'eye-off' : 'eye'"
-              :size="16"
-            />
-          </button>
-        </div>
-        <p class="text-muted text-xs mt-1.5">
-          仅保存在你自己的账户下，请求时通过 Authorization 头发送
+        <p class="text-muted text-xs -mt-2">
+          渠道的接口地址与 API Key 在「渠道管理」中统一维护
         </p>
-      </div>
+      </template>
 
-      <div>
-        <label class="od-label">Base URL（可选）</label>
-        <input
-          v-model="form.baseUrl"
-          class="od-input"
-          autocomplete="off"
-          placeholder="如 https://gateway.example.com/v1，留空用官方地址"
+      <!-- 无对话渠道的空态引导 -->
+      <div
+        v-else
+        class="border border-dashed border-border rounded-xl px-4 py-5 text-sm text-muted flex flex-col gap-2"
+      >
+        <p>还没有可用的对话模型渠道（需要渠道下至少一个「对话」用途的模型）</p>
+        <router-link
+          to="/channels"
+          class="text-accent-strong font-medium hover:underline"
         >
-        <p class="text-muted text-xs mt-1.5">
-          自定义 API 网关/代理地址，留空则走供应商默认地址
-        </p>
+          前往渠道管理创建 →
+        </router-link>
       </div>
 
       <div>
