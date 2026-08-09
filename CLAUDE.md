@@ -26,15 +26,27 @@ pnpm preview   # 本地预览生产构建
 
 ```
 src/
-├── lib/            # 框架无关层：api.ts（axios 实例+拦截器）、daily-report-api.ts、markdown.ts
-├── types/          # 共享 TypeScript 类型
-├── stores/         # Pinia：auth.ts（全局唯一 store）
+├── lib/            # 框架无关层：api.ts（axios 实例+拦截器）、daily-report-api.ts、markdown.ts、
+│                   #   canvas-api/generation-api/channels-api/prompts-api/assets-api/media-api、
+│                   #   agents-api/mcp-servers-api/skills-api/stock-signals-api、
+│                   #   zip.ts（fflate）+ assets-export.ts、canvas/（画布纯函数层）
+├── types/          # 共享 TypeScript 类型（canvas.ts 为画布文档类型，AGPL 移植）
+├── stores/         # Pinia：auth.ts、canvas.ts（画布文档态唯一权威：乐观锁/撤销重做/版本轮询）
 ├── composables/    # useTheme.ts（亮/暗主题切换，Navbar 与认证页共用）
 ├── router/         # vue-router 路由表 + 全局前置守卫（鉴权在这里，不在组件里）
-├── components/     # Navbar.vue、AuthShell.vue（登录/注册共用外壳）
+├── components/     # Navbar.vue、AuthShell.vue、AppIcon.vue（图标唯一来源）、EmptyState、ConfirmDeleteModal
 └── pages/
     ├── DailyReports/   # AI/股票日报 + components/（ReportList、ReportContent）
     ├── DevTools/       # 工具箱：components/ToolLayout.vue + tools/ 下 11 个独立工具 SFC
+    ├── Canvas/         # 无限画布：CanvasListPage + CanvasEditorPage + components/（节点/连线/工具栏/
+    │                   #   MiniMap/菜单）+ composables/（viewport/drag/resize/marquee/connection/
+    │                   #   keyboard/generation/task-watcher）
+    ├── Channels/       # AI 渠道管理（卡片 + 抽屉表单，apiKey 只写不读）
+    ├── Prompts/        # 提示词库（左源管理 + 右卡片/搜索/分页）
+    ├── Assets/         # 素材库（kind Tab + 搜索 + ZIP 导入导出）
+    ├── StockSignals/   # B 信号筛选（次级页，不进 Navbar；入口在 StockReportsPage；扫描需登录、结果公开）
+    ├── McpServers/     # MCP Server 管理（次级页；入口在 AgentsPage；列表仅返回启用中，env/headers 只写）
+    ├── Skills/         # Skill 管理（次级页；入口在 AgentsPage；列表仅返回启用中）
     └── Agents/
         ├── AgentsPage.vue           # Agent 管理：卡片网格 + 右侧抽屉（AgentFormDrawer）
         ├── AgentChatPage.vue        # 流式对话：左栏会话列表 + 右栏聊天 + 智能吸底
@@ -48,10 +60,12 @@ src/
         # 接口在 lib/agents-api.ts，类型在 types/agent.ts，流式在 composables/useAgentStream.ts
 ```
 
+**画布平台**（2026-08 从 infinite-canvas 迁移，AGPL-3.0，见根目录 NOTICE；后端设计文档在 tuanzi-server-base `docs/plans/2026-08-07-canvas-platform-design.md`）：画布文档存后端 MySQL（`canvas_projects.document` JSON + version 乐观锁），所有保存走 `stores/canvas.ts` 的 debounce PUT + 409 冲突模态；AI 生成走后端代理，视频为异步任务（`useGenerationTaskWatcher` 轮询终态后 syncVersion 重载）；媒体 URL 一律过 `lib/media-api.ts` 的 `mediaUrl()`（`/uploads/` 不在 `/api` 前缀下）。
+
 ## 后端连接
 
 - 所有请求发往 `import.meta.env.VITE_API_URL`（见 `.env.example`），缺省回退到硬编码生产地址 `http://43.140.214.49:3000/api`（`src/lib/api.ts:3`）。
-- 后端端点：`/api/auth/*`（注册/登录/刷新/资料）、`/api/daily-reports/*`、`/api/agents/*`（CRUD）与 `/api/conversations/*`（会话/消息/流式）。
+- 后端端点：`/api/auth/*`（注册/登录/刷新/资料）、`/api/daily-reports/*`、`/api/agents/*`（CRUD）与 `/api/conversations/*`（会话/消息/流式）、`/api/canvas-projects/*`（文档 PUT 带 baseVersion 乐观锁 + `/version` 轻量比对）、`/api/ai-generation/*`（images 同步 / videos+tasks 异步轮询）、`/api/ai-channels/*`、`/api/prompts/*`（含 sources 子资源与 refresh）、`/api/assets/*`、`/api/media/*`（上传/查询；文件本体在 `/uploads/`，不在 `/api` 前缀下）、`/api/stock-signals/*`（POST scans 需登录，结果与日期公开）、`/api/mcp-servers/*`、`/api/skills/*`。
 - Agents API 分页常量（`src/lib/agents-api.ts`）：`AGENTS_LIMIT=100`（一次拉全）、`CONVERSATIONS_LIMIT=20`（滚动加载）、`MESSAGES_LIMIT=30`（向上翻页）。删除会话走 `DELETE /conversations/:id`（不在 `/agents/` 下）。
 - 本地开发需后端 CORS 放行 `http://localhost:5173`（2026-07 迁移验收时后端未放行本地源，联调前需先确认）。
 
@@ -81,7 +95,7 @@ src/
 
 - **SFC 一律 `<script setup lang="ts">`**；类型导入必须 `import type`（`verbatimModuleSyntax` 开启，混用会编译失败）。
 - **API 层模式**：`src/lib/` 一个资源一个模块，首行 `import api from './api'`，方法内 `const { data } = await api.get<T>(...)` 后直接返回 `data`（参照 `daily-report-api.ts`）。类型放 `src/types/`。
-- **新增页面**：在 `src/router/index.ts` 注册路由（所有页面公开访问，无需 meta 标记）；在 `src/components/Navbar.vue` 的 `navItems` 数组加导航项（含 `activePattern` 正则）；带 Navbar 的页面根元素用 `min-h-screen` 即可（背景色在 body 上，无需装饰元素）。
+- **新增页面**：在 `src/router/index.ts` 注册路由（所有页面公开访问，无需 meta 标记）；**主板块**在 `src/components/Navbar.vue` 的 `navItems` 数组加导航项（含 `activePattern` 正则），**次级页面**（如 StockSignals/McpServers/Skills）不进 Navbar，从父页面用 `<router-link>` 进入；带 Navbar 的页面根元素用 `min-h-screen` 即可（背景色在 body 上，无需装饰元素）。
 - **服务端状态**用 vue-query（`useQuery`），**跨组件状态**用 Pinia store，组件本地状态用 `ref`；不引入其他状态库。
 - **数据到达后的派生选中**用 `watch(source, cb, { immediate: true })`——必须带 `immediate`，否则 vue-query 缓存命中（setup 时 data 已同步填充）且 structural sharing 保留引用时 watch 不触发（参照 `AIReportsPage.vue`）。
 - **markdown 渲染**：一律走 `src/lib/markdown.ts` 的 `renderMarkdown()`（markdown-it，`html: false` 防注入，链接自动 `target=_blank`），用 `v-html` 输出到带 `.markdown-content`（+ `theme-ai`/`theme-stock`）class 的容器；标签样式由 `index.css` 的 `.markdown-content` 后代选择器承担，不要在组件里给渲染内容加 class。
@@ -239,5 +253,5 @@ watch(() => props.content, (text) => {
 3. 涉及鉴权/路由的改动，浏览器手动验证：匿名可直接访问所有页面且 Navbar 显示「登录」；登录 → 回 `redirect` 来源页；退出 → 回 `/login` 且 localStorage 双 token 清空；token 过期 → 自动刷新无感继续（Network 面板可见 `/auth/refresh`）；刷新失败 → 静默登出留在当前页（Navbar 变回「登录」）。
 
 ---
-**版本**: v3.4（Agents 板块深度架构补完：SSE-via-XHR 实现细节、草稿会话状态机、消息归组/智能滚动/rAF 节流、流式中断约束）
-**最后更新**: 2026-07-28
+**版本**: v3.6（补录 StockSignals/McpServers/Skills 次级板块 + 后端端点清单补全）
+**最后更新**: 2026-08-08
