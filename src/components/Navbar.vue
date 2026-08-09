@@ -12,6 +12,10 @@ const navItems = [
   { path: '/ai-news', label: 'AI资讯', activePattern: /\/ai-news/ },
   { path: '/stock-news', label: '股票资讯', activePattern: /\/stock-news/ },
   { path: '/dev-tools', label: '开发工具', activePattern: /\/dev-tools/ },
+  { path: '/canvas', label: '画布', activePattern: /\/canvas/ },
+  { path: '/prompts', label: '提示词', activePattern: /\/prompts/ },
+  { path: '/channels', label: '渠道', activePattern: /\/channels/ },
+  { path: '/assets', label: '素材', activePattern: /\/assets/ },
   { path: '/agents', label: 'Agent', activePattern: /\/agents/ },
 ]
 
