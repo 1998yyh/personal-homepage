@@ -1,0 +1,29 @@
+NOTICE
+======
+
+This project contains code ported or adapted from infinite-canvas:
+
+    infinite-canvas
+    https://github.com/basketikun/infinite-canvas
+    Copyright (c) basketikun and contributors
+    Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0)
+
+Ported/adapted files carry a header comment of the form:
+
+    // Ported from infinite-canvas (https://github.com/basketikun/infinite-canvas), AGPL-3.0. See NOTICE.
+    // Adapted from infinite-canvas (https://github.com/basketikun/infinite-canvas), AGPL-3.0. See NOTICE.
+
+Scope in this repository (Vue 3 frontend):
+
+- src/types/canvas.ts                              (ported, canvas document types)
+- src/lib/canvas/canvas-node-geometry.ts           (ported)
+- src/lib/canvas/canvas-node-size.ts               (ported)
+- src/lib/canvas/canvas-node-factory.ts            (adapted: browser storage -> server media)
+- src/lib/canvas/canvas-export.ts                  (adapted: IndexedDB blobs -> server URLs)
+- src/lib/zip.ts                                   (ported, fflate zip helper)
+- src/pages/Canvas/**                              (adapted: React -> Vue 3 rewrite of the
+                                                    infinite canvas editor, node components,
+                                                    toolbar/minimap/context menus, generation glue)
+
+The full AGPL-3.0 license text is available at:
+https://www.gnu.org/licenses/agpl-3.0.html
