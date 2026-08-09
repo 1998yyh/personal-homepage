@@ -6,6 +6,8 @@ import type {
   Conversation,
   PagedResponse,
 } from '../types/agent';
+import type { McpServer } from '../types/mcp-server';
+import type { Skill } from '../types/skill';
 
 // 分页常量（设计文档 §10：Agent 一次拉全 / 会话滚动加载 / 消息向上翻页）
 export const AGENTS_LIMIT = 100;
@@ -55,6 +57,27 @@ export const agentsApi = {
 
   removeConversation: async (id: string) => {
     await api.delete(`/conversations/${id}`);
+  },
+
+  // ---- Agent 关联：MCP Server / Skill（整体替换语义） ----
+  getMcpServers: async (agentId: string) => {
+    const { data } = await api.get<McpServer[]>(`/agents/${agentId}/mcp-servers`);
+    return data;
+  },
+
+  updateMcpServers: async (agentId: string, mcpServerIds: string[]) => {
+    const { data } = await api.put<McpServer[]>(`/agents/${agentId}/mcp-servers`, { mcpServerIds });
+    return data;
+  },
+
+  getSkills: async (agentId: string) => {
+    const { data } = await api.get<Skill[]>(`/agents/${agentId}/skills`);
+    return data;
+  },
+
+  updateSkills: async (agentId: string, skillIds: string[]) => {
+    const { data } = await api.put<Skill[]>(`/agents/${agentId}/skills`, { skillIds });
+    return data;
   },
 
   /** 消息历史：后端 DESC 分页，page=1 为最新一页 */
