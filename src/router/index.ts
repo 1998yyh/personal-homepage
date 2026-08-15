@@ -4,8 +4,8 @@ import { useAuthStore } from '../stores/auth'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/login', component: () => import('../pages/LoginPage.vue'), meta: { public: true } },
-    { path: '/register', component: () => import('../pages/RegisterPage.vue'), meta: { public: true } },
+    { path: '/login', component: () => import('../pages/LoginPage.vue') },
+    { path: '/register', component: () => import('../pages/RegisterPage.vue') },
     { path: '/', component: () => import('../pages/HomePage.vue') },
     { path: '/ai-news', component: () => import('../pages/DailyReports/AIReportsPage.vue') },
     { path: '/stock-news', component: () => import('../pages/DailyReports/StockReportsPage.vue') },

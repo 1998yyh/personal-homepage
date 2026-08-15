@@ -29,14 +29,9 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-          const { data } = await api.post('/auth/refresh', { refreshToken });
-          localStorage.setItem('accessToken', data.accessToken);
-          localStorage.setItem('refreshToken', data.refreshToken);
-          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-          return api(originalRequest);
-        }
+        const accessToken = await refreshTokens();
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return api(originalRequest);
       } catch {
         // 刷新失败：静默登出（全站公开访问，不再强制跳登录页）。
         // 动态引入避免循环依赖：stores/auth.ts 静态依赖本模块的 authApi。
@@ -50,6 +45,30 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * 单飞刷新：并发 401 只发一次 /auth/refresh，其余请求等待同一 promise。
+ * 后端 refreshToken 每次刷新都会轮换，并发各自刷新会互相顶掉新 token 导致误登出。
+ * 失败时所有等待方共享失败（同一 catch 路径静默登出）。
+ */
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshTokens(): Promise<string> {
+  if (refreshPromise) return refreshPromise;
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) return Promise.reject(new Error('缺少 refreshToken'));
+  refreshPromise = api
+    .post<AuthResponse>('/auth/refresh', { refreshToken })
+    .then(({ data }) => {
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      return data.accessToken;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+  return refreshPromise;
+}
 
 export interface RegisterData {
   email: string;
