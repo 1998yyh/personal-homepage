@@ -10,7 +10,7 @@ import Navbar from '../../components/Navbar.vue'
 const selectedReport = ref<DailyReport | null>(null)
 
 // 获取AI日报列表
-const { data: reportsData, isLoading } = useQuery({
+const { data: reportsData, isLoading, isError } = useQuery({
   queryKey: ['daily-reports', 'ai'],
   queryFn: () => dailyReportsApi.getList({ type: 'ai', limit: 30 }),
 })
@@ -58,7 +58,14 @@ watch(
             </h3>
           </div>
           <div class="p-2 flex-1 overflow-hidden">
+            <p
+              v-if="isError"
+              class="p-3 text-danger text-sm"
+            >
+              日报加载失败，请稍后重试
+            </p>
             <ReportList
+              v-else
               :reports="reportsData?.items || []"
               :selected-report="selectedReport"
               :is-loading="isLoading"
