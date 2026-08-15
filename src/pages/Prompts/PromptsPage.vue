@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { promptsApi } from '../../lib/prompts-api'
@@ -19,15 +19,30 @@ const PAGE_SIZE = 24
 
 // ---- 过滤态 ----
 const keyword = ref('')
+const debouncedKeyword = ref('')
 const category = ref(ALL_PROMPTS_OPTION)
 const activeTags = ref<string[]>([])
 const page = ref(1)
 
+// 搜索防抖：连续输入不每键发请求，停止 300ms 后才进 queryKey
+let keywordTimer: ReturnType<typeof setTimeout> | null = null
+watch(keyword, (value) => {
+  if (keywordTimer) clearTimeout(keywordTimer)
+  keywordTimer = setTimeout(() => {
+    debouncedKeyword.value = value
+    page.value = 1
+  }, 300)
+})
+
+onBeforeUnmount(() => {
+  if (keywordTimer) clearTimeout(keywordTimer)
+})
+
 const { data: promptData, isLoading } = useQuery({
-  queryKey: ['prompts', keyword, category, activeTags, page],
+  queryKey: ['prompts', debouncedKeyword, category, activeTags, page],
   queryFn: () =>
     promptsApi.fetchPrompts({
-      keyword: keyword.value || undefined,
+      keyword: debouncedKeyword.value || undefined,
       category: category.value,
       tag: activeTags.value.join(',') || undefined,
       page: page.value,
@@ -342,7 +357,6 @@ const copyPrompt = async (prompt: Prompt) => {
                 v-model="keyword"
                 class="od-input !pl-9 !w-56 max-sm:!w-full"
                 placeholder="搜索标题 / 内容 / 标签"
-                @input="resetPage"
               >
             </div>
           </div>
