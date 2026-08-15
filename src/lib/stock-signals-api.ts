@@ -1,6 +1,5 @@
 import api from './api';
 import type {
-  CodesScanResult,
   DailySignalsResult,
   ScanRequestResponse,
   ScanRunStatusResponse,
@@ -32,6 +31,4 @@ export const stockSignalsApi = {
     return data;
   },
 };
-
-export type { CodesScanResult };
 export default stockSignalsApi;

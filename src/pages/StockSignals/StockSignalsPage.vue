@@ -56,6 +56,10 @@ const activeRun = ref<ScanRun | null>(null)
 const scanning = computed(() => !!activeRun.value)
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 
+// 异步竞态守卫：每次加载/扫描自增序号，只有最新序号的结果才允许写入 UI，
+// 避免「先点 A 后点 B，A 后返回覆盖 B 数据」与扫描轮询晚到覆盖新选择的日期
+let requestSeq = 0
+
 // ---- 历史日期 ----
 const dates = ref<SignalDateEntry[]>([])
 
@@ -79,12 +83,14 @@ const resetResult = () => {
 
 /** 读取某日缓存结果（公开接口；404 = 尚未扫描） */
 const loadByDate = async (date: string) => {
+  const seq = ++requestSeq
   clearPoll()
   activeRun.value = null
   resetResult()
   loading.value = true
   try {
     const data = await stockSignalsApi.getByDate(date)
+    if (seq !== requestSeq) return // 过期响应：期间已发起更新的请求，丢弃
     items.value = data.items
     stats.value = {
       found: data.found,
@@ -96,6 +102,7 @@ const loadByDate = async (date: string) => {
       warnings.value = [`有 ${data.failedCodes.length} 只股票读取失败：${data.failedCodes.slice(0, 10).join('、')}${data.failedCodes.length > 10 ? '…' : ''}`]
     }
   } catch (e) {
+    if (seq !== requestSeq) return
     const status = (e as { response?: { status?: number } }).response?.status
     if (status === 404) {
       notScanned.value = true
@@ -103,7 +110,7 @@ const loadByDate = async (date: string) => {
       error.value = '查询失败，请稍后重试'
     }
   } finally {
-    loading.value = false
+    if (seq === requestSeq) loading.value = false
   }
 }
 
@@ -115,12 +122,13 @@ const loadDates = async () => {
   }
 }
 
-/** 轮询任务进度（2s 间隔） */
-const pollRun = (runId: string) => {
+/** 轮询任务进度（2s 间隔）；seq 为发起扫描时的序号，过期即停轮询丢弃结果 */
+const pollRun = (runId: string, seq: number) => {
   clearPoll()
   const tick = async () => {
     try {
       const { run, items: doneItems } = await stockSignalsApi.getRun(runId)
+      if (seq !== requestSeq) return // 期间用户切了日期/发起了新扫描：丢弃并停止
       activeRun.value = { ...run }
       if (run.status === 'done') {
         clearPoll()
@@ -146,6 +154,7 @@ const pollRun = (runId: string) => {
       }
       pollTimer = setTimeout(tick, 2000)
     } catch {
+      if (seq !== requestSeq) return
       clearPoll()
       activeRun.value = null
       error.value = '进度查询失败，请刷新页面'
@@ -156,6 +165,7 @@ const pollRun = (runId: string) => {
 
 /** 发起扫描（全市场 / 指定代码 / 强制刷新共用入口） */
 const scan = async (refresh = false) => {
+  const seq = ++requestSeq
   if (!auth.isAuthenticated) {
     router.push({ path: '/login', query: { redirect: '/stock-signals' } })
     return
@@ -183,6 +193,7 @@ const scan = async (refresh = false) => {
         codes,
         refresh,
       })
+      if (seq !== requestSeq) return // 过期响应：丢弃
       if (result) {
         items.value = result.items
         stats.value = {
@@ -202,19 +213,21 @@ const scan = async (refresh = false) => {
         date: queryDate.value,
         refresh,
       })
+      if (seq !== requestSeq) return // 过期响应：丢弃
       if (cached) {
         await loadByDate(queryDate.value)
       } else if (run) {
         activeRun.value = { ...run }
-        pollRun(run.id)
+        pollRun(run.id, seq)
       }
     }
   } catch (e) {
+    if (seq !== requestSeq) return
     error.value =
       (e as { response?: { data?: { message?: string } } }).response?.data?.message ??
       '扫描失败，请稍后重试'
   } finally {
-    loading.value = false
+    if (seq === requestSeq) loading.value = false
   }
 }
 
