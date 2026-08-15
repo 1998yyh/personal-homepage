@@ -53,7 +53,7 @@ src/
         ├── components/
         │   ├── AgentFormDrawer.vue  # 创建/编辑抽屉（Esc 关闭，高级配置默认折叠）
         │   ├── ConversationList.vue # 左侧会话列表（前端搜索 + 草稿占位项 + 滚动加载）
-        │   ├── MessageBubble.vue    # 消息气泡（user=accent-soft 纯文本 / assistant=markdown，rAF 节流）
+        │   ├── MessageBubble.vue    # 消息气泡（user=accent-soft 纯文本 / assistant=markdown，时间片节流）
         │   └── ToolCallCard.vue     # 工具调用卡片（流式 running / 历史 done）
         └── utils/
             └── groupMessages.ts    # 历史消息归组：role='tool' 配对进 assistant.toolCalls
@@ -187,18 +187,20 @@ userNearBottom = scrollHeight - scrollTop - clientHeight < 80  // 阈值 80px
 
 ### 流式渲染节流（MessageBubble）
 
-`props.content` 每个 delta 都变，用 rAF 节流重渲 markdown（避免高频解析卡顿）：
+`props.content` 每个 delta 都变。markdown 无法安全增量渲染（代码围栏会改变后文解析），只能整段重解析——若每个 delta 都渲一次，长回答下会 O(n²) 卡顿。故按时间片节流（约 90ms ≈ 11fps，肉眼已顺滑）：
 
 ```ts
 watch(() => props.content, (text) => {
   if (!props.streaming) { displayText.value = text; return; }
-  if (rafId != null) return;  // 上一帧还没到，跳过
-  rafId = requestAnimationFrame(() => {
+  if (timer != null) return;  // 本时间片内已排程，等它触发时取最新全文
+  timer = setTimeout(() => {
+    timer = null;
     displayText.value = props.content;
-    rafId = null;
-  });
+  }, 90);
 });
 ```
+
+流结束（`streaming` true → false）时立即补渲最终全文，不留半截；`onBeforeUnmount` 清理未触发的 timer。
 
 首 token/工具卡片到达前展示「正在思考」占位（三点弹跳动画，`.thinking-dot`），避免空气泡像卡死。
 
