@@ -41,6 +41,8 @@ async function handleCreate() {
   try {
     const project = await canvasApi.create(`画布 ${new Date().toLocaleDateString('zh-CN')}`);
     router.push(`/canvas/${project.id}`);
+  } catch {
+    // 创建失败：保持列表页，静默（后续可在此补充 toast 提示）
   } finally {
     creating.value = false;
   }

@@ -37,6 +37,8 @@ const historyPast: CanvasSnapshot[] = [];
 let historyFuture: CanvasSnapshot[] = [];
 let lastSnapshot: CanvasSnapshot | null = null;
 let historyCommitTimer: ReturnType<typeof setTimeout> | null = null;
+/** applySnapshot 里「下一拍落 lastSnapshot」的定时器：undo/redo/load 前必须清理，避免旧快照覆盖新项目状态 */
+let applySnapshotTimer: ReturnType<typeof setTimeout> | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let versionPollTimer: ReturnType<typeof setInterval> | null = null;
 let applyingHistory = false;
@@ -163,11 +165,16 @@ export const useCanvasStore = defineStore('canvas', () => {
       historyPast.length = 0;
       historyFuture = [];
       clearHistoryCommitTimer();
+      if (applySnapshotTimer) {
+        clearTimeout(applySnapshotTimer);
+        applySnapshotTimer = null;
+      }
       lastSnapshot = snapshot();
       applyingHistory = false;
       historyPaused = false;
       dirty.value = false;
       clearInteraction();
+      syncHistoryFlags();
       loaded.value = true;
       return { restoredViewport };
     } catch (error) {
@@ -187,6 +194,10 @@ export const useCanvasStore = defineStore('canvas', () => {
       saveTimer = null;
     }
     clearHistoryCommitTimer();
+    if (applySnapshotTimer) {
+      clearTimeout(applySnapshotTimer);
+      applySnapshotTimer = null;
+    }
     projectId.value = null;
     name.value = '';
     version.value = 0;
@@ -248,6 +259,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   // ── 撤销 / 重做 ─────────────────────────────────────────────
   function applySnapshot(entry: CanvasSnapshot) {
     clearHistoryCommitTimer();
+    if (applySnapshotTimer) clearTimeout(applySnapshotTimer);
     applyingHistory = true;
     nodes.value = entry.nodes;
     connections.value = entry.connections;
@@ -256,7 +268,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     selectedConnectionId.value = null;
     contextMenu.value = null;
     // 与源实现一致：下一拍再落 lastSnapshot，避免 undo 本身触发一次历史提交
-    setTimeout(() => {
+    // （定时器 id 留存：快速连按 undo/redo 或中途 load 时先清掉上一拍，避免旧快照覆盖新状态）
+    applySnapshotTimer = setTimeout(() => {
+      applySnapshotTimer = null;
       lastSnapshot = entry;
       applyingHistory = false;
       syncHistoryFlags();

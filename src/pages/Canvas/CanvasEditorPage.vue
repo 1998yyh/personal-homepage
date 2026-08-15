@@ -78,10 +78,14 @@ const needsCenter = ref(false);
 
 watch(
   projectId,
-  async (id) => {
+  async (id, oldId) => {
     if (!id) {
       router.replace('/canvas');
       return;
+    }
+    // 从其他画布直接导航过来（同组件实例内路由参数变化）：先把旧项目未保存的修改落库
+    if (oldId && oldId !== id) {
+      await store.saveNow();
     }
     try {
       const { restoredViewport } = await store.load(id);
@@ -506,7 +510,13 @@ function startTitleEditing() {
 async function finishTitleEditing() {
   const next = titleDraft.value.trim();
   titleEditing.value = false;
-  if (next && next !== store.name) await store.renameProject(next);
+  if (next && next !== store.name) {
+    try {
+      await store.renameProject(next);
+    } catch {
+      // 重命名失败：保持原名称（titleEditing 已关闭，输入丢弃）
+    }
+  }
 }
 
 const saveStatusText = computed(() => {
