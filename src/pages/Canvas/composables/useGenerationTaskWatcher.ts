@@ -27,16 +27,18 @@ export function useGenerationTaskWatcher() {
     if (!pendingNodes.length) return;
     polling = true;
     try {
-      for (const node of pendingNodes) {
-        const taskId = node.metadata?.taskId;
-        if (!taskId) continue;
-        try {
-          const task = await generationApi.getTask(taskId);
-          if (TERMINAL_STATUSES.has(task.status)) {
-            await store.syncVersion();
-          }
-        } catch {
-          // 单次查询失败（网络抖动等）下一轮再试
+      // 查询并行、syncVersion（内部 load 整文档）串行，避免并发重载竞态
+      const results = await Promise.allSettled(
+        pendingNodes.map((node) => {
+          const taskId = node.metadata?.taskId;
+          return taskId ? generationApi.getTask(taskId) : Promise.resolve(null);
+        }),
+      );
+      for (const result of results) {
+        if (result.status !== 'fulfilled' || !result.value) continue;
+        const task = result.value;
+        if (TERMINAL_STATUSES.has(task.status)) {
+          await store.syncVersion();
         }
       }
     } finally {

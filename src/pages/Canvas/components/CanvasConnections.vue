@@ -35,17 +35,15 @@ function connectionPath(from: CanvasNodeData, to: CanvasNodeData) {
 
 const visibleConnections = computed(() =>
   connections.value
-    .map((connection) => ({
-      connection,
-      from: nodeById.value.get(connection.fromNodeId),
-      to: nodeById.value.get(connection.toNodeId),
-    }))
-    .filter(
-      (item): item is { connection: CanvasConnection; from: CanvasNodeData; to: CanvasNodeData } =>
-        Boolean(item.from && item.to) &&
-        !isHiddenBatchConnectionEndpoint(item.from as CanvasNodeData, nodes.value) &&
-        !isHiddenBatchConnectionEndpoint(item.to as CanvasNodeData, nodes.value),
-    ),
+    .map((connection) => {
+      const from = nodeById.value.get(connection.fromNodeId);
+      const to = nodeById.value.get(connection.toNodeId);
+      if (!from || !to) return null;
+      if (isHiddenBatchConnectionEndpoint(from, nodes.value) || isHiddenBatchConnectionEndpoint(to, nodes.value)) return null;
+      // path 字符串在此缓存：父组件高频重渲染（拖拽/缩放）时不再逐条重算
+      return { connection, from, to, d: connectionPath(from, to) };
+    })
+    .filter((item): item is { connection: CanvasConnection; from: CanvasNodeData; to: CanvasNodeData; d: string } => item !== null),
 );
 
 function isActive(connectionId: string) {
@@ -90,12 +88,12 @@ function handleContextMenu(event: MouseEvent, connectionId: string) {
     style="pointer-events: none; transform: translateZ(0); z-index: 0"
   >
     <g
-      v-for="{ connection, from, to } in visibleConnections"
+      v-for="{ connection, d } in visibleConnections"
       :key="connection.id"
     >
       <path
         :data-connection-id="connection.id"
-        :d="connectionPath(from, to)"
+        :d="d"
         stroke="transparent"
         stroke-width="16"
         fill="none"
@@ -104,7 +102,7 @@ function handleContextMenu(event: MouseEvent, connectionId: string) {
         @contextmenu="(event) => handleContextMenu(event, connection.id)"
       />
       <path
-        :d="connectionPath(from, to)"
+        :d="d"
         :stroke="isActive(connection.id) ? SELECTION_BLUE : 'var(--muted)'"
         :stroke-width="isActive(connection.id) ? 3 : 2"
         :stroke-opacity="isActive(connection.id) ? 1 : 0.82"

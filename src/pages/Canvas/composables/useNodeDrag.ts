@@ -98,24 +98,20 @@ export function useNodeDrag() {
     if (Math.abs(event.clientX - dragState.startX) > DRAG_CLICK_THRESHOLD || Math.abs(event.clientY - dragState.startY) > DRAG_CLICK_THRESHOLD) {
       dragState.hasMoved = true;
     }
-    const initialPositions = dragState.initialSelectedNodes;
-    const previewNodes = store.nodes.map((node) => {
-      const initial = initialPositions.find((item) => item.id === node.id);
-      return initial ? { ...node, position: { x: initial.x + dx, y: initial.y + dy } } : node;
-    });
-    // 分组吸附预览高亮
-    const movedIds = new Set(initialPositions.map((item) => item.id));
-    store.dropTargetGroupId = findGroupDropTarget(movedIds, previewNodes)?.id || null;
+    // 初始位置建 Map 索引，避免每帧对每个节点 find（O(n·m)）
+    const initialById = new Map(dragState.initialSelectedNodes.map((item) => [item.id, item]));
+    const movedIds = new Set(dragState.initialSelectedNodes.map((item) => item.id));
 
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(() => {
       rafId = null;
-      store.applyLocal({
-        nodes: store.nodes.map((node) => {
-          const initial = initialPositions.find((item) => item.id === node.id);
-          return initial ? { ...node, position: { x: initial.x + dx, y: initial.y + dy } } : node;
-        }),
+      const previewNodes = store.nodes.map((node) => {
+        const initial = initialById.get(node.id);
+        return initial ? { ...node, position: { x: initial.x + dx, y: initial.y + dy } } : node;
       });
+      // 分组吸附预览高亮（与落位同一份数组，一次 map 两用）
+      store.dropTargetGroupId = findGroupDropTarget(movedIds, previewNodes)?.id || null;
+      store.applyLocal({ nodes: previewNodes });
     });
   }
 

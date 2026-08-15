@@ -25,6 +25,8 @@ type ConnectionDropTarget = {
 export function useConnectionDrag(options: { screenToCanvas: ScreenToCanvas }) {
   const store = useCanvasStore();
   const pendingConnectionCreate = ref<PendingConnectionCreate | null>(null);
+  let frameId: number | null = null;
+  let nextTarget: { dropTarget: ConnectionDropTarget; mouse: Position } | null = null;
 
   function setConnecting(next: ConnectionHandle | null) {
     store.connecting = next;
@@ -84,9 +86,20 @@ export function useConnectionDrag(options: { screenToCanvas: ScreenToCanvas }) {
 
   function handleGlobalMouseMove(event: MouseEvent) {
     if (!store.connecting || pendingConnectionCreate.value) return;
+    // 命中检测每帧全量遍历节点，用 rAF 合帧避免高频 mousemove 重复计算
     const dropTarget = getConnectionDropTarget(event.clientX, event.clientY, store.connecting);
-    store.connectionTargetNodeId = dropTarget.nodeId;
-    store.mouseWorld = options.screenToCanvas(event.clientX, event.clientY);
+    const mouse = options.screenToCanvas(event.clientX, event.clientY);
+    if (frameId) {
+      nextTarget = { dropTarget, mouse };
+      return;
+    }
+    frameId = requestAnimationFrame(() => {
+      frameId = null;
+      const target = nextTarget ?? { dropTarget, mouse };
+      nextTarget = null;
+      store.connectionTargetNodeId = target.dropTarget.nodeId;
+      store.mouseWorld = target.mouse;
+    });
   }
 
   function handleGlobalMouseUp(event: MouseEvent) {
@@ -115,6 +128,7 @@ export function useConnectionDrag(options: { screenToCanvas: ScreenToCanvas }) {
   onBeforeUnmount(() => {
     window.removeEventListener('mousemove', handleGlobalMouseMove);
     window.removeEventListener('mouseup', handleGlobalMouseUp);
+    if (frameId) cancelAnimationFrame(frameId);
   });
 
   return { pendingConnectionCreate, handleConnectStart, setConnecting, cancelPendingConnectionCreate };

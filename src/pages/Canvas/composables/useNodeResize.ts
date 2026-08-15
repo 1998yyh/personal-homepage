@@ -39,13 +39,14 @@ export function useNodeResize() {
     ratio: 1,
   };
   let resizingNodeId: string | null = null;
+  let frameId: number | null = null;
+  let pendingDx = 0;
+  let pendingDy = 0;
 
-  function handleResizeMove(event: MouseEvent) {
-    if (!resizeState.isResizing || !resizingNodeId) return;
+  /** 用最新 dx/dy 计算新尺寸并落库（rAF 每帧一次） */
+  function applyResize(dx: number, dy: number) {
     const nodeId = resizingNodeId;
-    const scale = store.viewport.k;
-    const dx = (event.clientX - resizeState.startX) / scale;
-    const dy = (event.clientY - resizeState.startY) / scale;
+    if (!nodeId) return;
     const startRight = resizeState.startLeft + resizeState.startWidth;
     const startBottom = resizeState.startTop + resizeState.startHeight;
     const fromLeft = resizeState.corner.includes('left');
@@ -78,8 +79,26 @@ export function useNodeResize() {
     store.updateNode(nodeId, (node) => ({ ...node, width, height, position }));
   }
 
+  function handleResizeMove(event: MouseEvent) {
+    if (!resizeState.isResizing || !resizingNodeId) return;
+    const scale = store.viewport.k;
+    pendingDx = (event.clientX - resizeState.startX) / scale;
+    pendingDy = (event.clientY - resizeState.startY) / scale;
+    if (frameId) return;
+    frameId = requestAnimationFrame(() => {
+      frameId = null;
+      applyResize(pendingDx, pendingDy);
+    });
+  }
+
   function handleResizeUp() {
     if (!resizeState.isResizing) return;
+    // 先冲刷挂起的最后一帧，避免松手瞬间丢失位移
+    if (frameId) {
+      cancelAnimationFrame(frameId);
+      frameId = null;
+      applyResize(pendingDx, pendingDy);
+    }
     resizeState.isResizing = false;
     resizingNodeId = null;
     window.removeEventListener('mousemove', handleResizeMove);
@@ -112,6 +131,10 @@ export function useNodeResize() {
   onBeforeUnmount(() => {
     window.removeEventListener('mousemove', handleResizeMove);
     window.removeEventListener('mouseup', handleResizeUp);
+    if (frameId) {
+      cancelAnimationFrame(frameId);
+      frameId = null;
+    }
     if (resizeState.isResizing) {
       store.isNodeResizing = false;
       store.resumeHistory();
