@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const hex = ref('#3b82f6')
 const rgb = ref({ r: 59, g: 130, b: 246 })
 const hsl = ref({ h: 217, s: 91, l: 60 })
+const error = ref('')
 
 const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
@@ -44,13 +45,25 @@ const rgbToHsl = (r: number, g: number, b: number) => {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) }
 }
 
+/** 当前输入对应的合法颜色；非法输入时返回 null（色块/变量面板不展示错误值） */
+const validHex = computed(() => {
+  const rgbVal = hexToRgb(hex.value)
+  return rgbVal ? hex.value : null
+})
+
 const updateFromHex = (newHex: string) => {
-  hex.value = newHex
-  const rgbVal = hexToRgb(newHex)
-  if (rgbVal) {
-    rgb.value = rgbVal
-    hsl.value = rgbToHsl(rgbVal.r, rgbVal.g, rgbVal.b)
+  const raw = newHex.trim()
+  // 允许自由输入（含中间态），但只有合法时才同步 RGB/HSL 与色块
+  const normalized = raw.startsWith('#') ? raw : `#${raw}`
+  const rgbVal = hexToRgb(normalized)
+  if (!rgbVal) {
+    error.value = 'HEX 格式无效，应为 #RRGGBB'
+    return
   }
+  error.value = ''
+  hex.value = normalized
+  rgb.value = rgbVal
+  hsl.value = rgbToHsl(rgbVal.r, rgbVal.g, rgbVal.b)
 }
 
 const onHexInput = (e: Event) => {
@@ -63,12 +76,12 @@ const onHexInput = (e: Event) => {
     <div class="flex items-center gap-4">
       <div
         class="w-24 h-24 rounded-xl border border-border shadow-card"
-        :style="{ backgroundColor: hex }"
+        :style="{ backgroundColor: validHex || 'transparent' }"
       />
       <div>
         <input
           type="color"
-          :value="hex"
+          :value="validHex || '#000000'"
           class="w-12 h-10 cursor-pointer"
           @input="onHexInput"
         >
@@ -82,8 +95,15 @@ const onHexInput = (e: Event) => {
           type="text"
           :value="hex"
           class="od-input font-mono"
+          :class="{ err: !!error }"
           @input="onHexInput"
         >
+        <p
+          v-if="error"
+          class="field-msg text-danger text-xs mt-1"
+        >
+          {{ error }}
+        </p>
       </div>
       <div>
         <label class="od-label">RGB</label>
@@ -105,11 +125,14 @@ const onHexInput = (e: Event) => {
       </div>
     </div>
 
-    <div class="od-panel p-3">
+    <div
+      v-if="validHex"
+      class="od-panel p-3"
+    >
       <p class="text-muted text-sm">
         CSS 变量:
       </p>
-      <code class="text-accent-strong text-sm">--color: {{ hex }};</code>
+      <code class="text-accent-strong text-sm">--color: {{ validHex }};</code>
     </div>
   </div>
 </template>

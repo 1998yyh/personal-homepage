@@ -3,27 +3,42 @@ import { ref } from 'vue'
 
 const input = ref('')
 const hashes = ref<Record<string, string>>({})
+const error = ref('')
+const calculating = ref(false)
 
 const calculate = async () => {
   if (!input.value) return
-
-  const encoder = new TextEncoder()
-  const data = encoder.encode(input.value)
-
-  const algorithms = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512']
-  const results: Record<string, string> = {}
-
-  for (const alg of algorithms) {
-    const hashBuffer = await crypto.subtle.digest(alg, data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    results[alg] = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  if (!crypto.subtle) {
+    // WebCrypto 仅在安全上下文（https / localhost）可用，局域网 http 访问时降级为提示
+    error.value = '当前环境不支持 WebCrypto（需通过 https 或 localhost 访问），无法计算 Hash'
+    hashes.value = {}
+    return
   }
+  error.value = ''
+  calculating.value = true
+  try {
+    const encoder = new TextEncoder()
+    const data = encoder.encode(input.value)
 
-  hashes.value = results
+    const algorithms = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512']
+    // 各算法互不依赖，并行计算
+    const results = await Promise.all(
+      algorithms.map(async (alg) => {
+        const hashBuffer = await crypto.subtle.digest(alg, data)
+        const hashArray = Array.from(new Uint8Array(hashBuffer))
+        return [alg, hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')] as const
+      }),
+    )
+    hashes.value = Object.fromEntries(results)
+  } catch {
+    error.value = 'Hash 计算失败，请重试'
+  } finally {
+    calculating.value = false
+  }
 }
 
 const copyHash = (hash: string) => {
-  navigator.clipboard.writeText(hash)
+  navigator.clipboard?.writeText(hash).catch(() => {})
 }
 </script>
 
@@ -40,10 +55,18 @@ const copyHash = (hash: string) => {
 
     <button
       class="od-btn od-btn-primary"
+      :disabled="calculating"
       @click="calculate"
     >
-      计算 Hash
+      {{ calculating ? '计算中…' : '计算 Hash' }}
     </button>
+
+    <p
+      v-if="error"
+      class="text-danger text-sm"
+    >
+      {{ error }}
+    </p>
 
     <div
       v-if="Object.keys(hashes).length > 0"

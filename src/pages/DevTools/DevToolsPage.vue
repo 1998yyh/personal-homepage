@@ -22,7 +22,7 @@ interface Tool {
   category: string
 }
 
-const tools: Tool[] = [
+const tools = [
   // 编码/解码
   { id: 'base64', name: 'Base64', icon: 'binary', category: '编码/解码' },
   { id: 'url', name: 'URL 编码', icon: 'link', category: '编码/解码' },
@@ -38,11 +38,12 @@ const tools: Tool[] = [
   { id: 'uuid', name: 'UUID 生成', icon: 'key', category: '生成' },
   { id: 'password', name: '随机密码', icon: 'lock', category: '生成' },
   { id: 'hash', name: 'Hash 计算', icon: 'shield-check', category: '生成' },
-]
+] as const satisfies readonly Tool[]
 
 const categories = [...new Set(tools.map(t => t.category))]
 
-const toolComponents: Record<string, Component> = {
+// satisfies 强制工具清单与组件映射 key 对齐：新增/漏注册工具在编译期报错
+const toolComponents = {
   base64: Base64Tool,
   url: UrlTool,
   'html-entity': HtmlEntityTool,
@@ -54,9 +55,9 @@ const toolComponents: Record<string, Component> = {
   uuid: UuidTool,
   password: PasswordTool,
   hash: HashTool,
-}
+} satisfies Record<(typeof tools)[number]['id'], Component>
 
-const selectedTool = ref<Tool>(tools[0])
+const selectedTool = ref<(typeof tools)[number]>(tools[0])
 const searchQuery = ref('')
 
 const filteredTools = computed(() =>

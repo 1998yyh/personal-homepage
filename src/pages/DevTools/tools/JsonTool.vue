@@ -12,7 +12,7 @@ const format = () => {
     output.value = JSON.stringify(parsed, null, 2)
     error.value = ''
   } catch (e) {
-    error.value = 'JSON 格式错误：' + (e as Error).message
+    error.value = 'JSON 格式错误：' + (e instanceof Error ? e.message : String(e))
   }
 }
 
@@ -22,7 +22,7 @@ const compress = () => {
     output.value = JSON.stringify(parsed)
     error.value = ''
   } catch (e) {
-    error.value = 'JSON 格式错误：' + (e as Error).message
+    error.value = 'JSON 格式错误：' + (e instanceof Error ? e.message : String(e))
   }
 }
 

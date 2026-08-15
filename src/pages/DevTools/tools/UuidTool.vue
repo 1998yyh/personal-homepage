@@ -4,20 +4,28 @@ import { ref } from 'vue'
 const uuids = ref<string[]>([])
 const count = ref(5)
 
+/** UUID v4：安全上下文用 crypto.randomUUID；http 局域网访问降级 getRandomValues 构造 */
+const randomUuid = () => {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0'))
+  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`
+}
+
 const generate = () => {
-  const newUuids = []
-  for (let i = 0; i < count.value; i++) {
-    newUuids.push(crypto.randomUUID())
-  }
-  uuids.value = newUuids
+  const total = Math.max(1, Math.min(100, count.value))
+  uuids.value = Array.from({ length: total }, randomUuid)
 }
 
 const copyAll = () => {
-  navigator.clipboard.writeText(uuids.value.join('\n'))
+  navigator.clipboard?.writeText(uuids.value.join('\n')).catch(() => {})
 }
 
 const copyOne = (uuid: string) => {
-  navigator.clipboard.writeText(uuid)
+  navigator.clipboard?.writeText(uuid).catch(() => {})
 }
 
 const onCountInput = (e: Event) => {

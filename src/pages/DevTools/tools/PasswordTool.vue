@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 
 const password = ref('')
+const error = ref('')
 const length = ref(16)
 const options = ref({
   uppercase: true,
@@ -18,6 +19,7 @@ const optionItems: { key: keyof typeof options.value; label: string }[] = [
 ]
 
 const generate = () => {
+  error.value = ''
   let chars = ''
   if (options.value.uppercase) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
   if (options.value.lowercase) chars += 'abcdefghijklmnopqrstuvwxyz'
@@ -25,13 +27,21 @@ const generate = () => {
   if (options.value.symbols) chars += '!@#$%^&*()_+-=[]{}|;:,.<>?'
 
   if (!chars) {
-    password.value = '请至少选择一种字符类型'
+    // 校验错误与结果字段分离，不把提示文案当密码展示
+    password.value = ''
+    error.value = '请至少选择一种字符类型'
     return
   }
 
+  // 密码学安全随机（getRandomValues 非安全上下文也可用），拒绝采样避免模偏差
+  const maxValid = 256 - (256 % chars.length)
   let result = ''
-  for (let i = 0; i < length.value; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  while (result.length < length.value) {
+    const bytes = new Uint8Array(length.value - result.length)
+    crypto.getRandomValues(bytes)
+    for (const b of bytes) {
+      if (b < maxValid) result += chars.charAt(b % chars.length)
+    }
   }
   password.value = result
 }
@@ -52,7 +62,7 @@ const getStrength = (pwd: string) => {
 }
 
 const copyPassword = () => {
-  navigator.clipboard.writeText(password.value)
+  navigator.clipboard?.writeText(password.value).catch(() => {})
 }
 
 const toggleOption = (key: keyof typeof options.value, e: Event) => {
@@ -101,6 +111,13 @@ const onLengthInput = (e: Event) => {
     >
       生成密码
     </button>
+
+    <p
+      v-if="error"
+      class="text-danger text-sm"
+    >
+      {{ error }}
+    </p>
 
     <div
       v-if="password"

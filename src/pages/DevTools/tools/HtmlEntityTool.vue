@@ -1,3 +1,14 @@
+<script lang="ts">
+// 模块级常量：避免每次点击重建映射表
+const HTML_ENTITIES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
+</script>
+
 <script setup lang="ts">
 import { ref } from 'vue'
 import ToolLayout from '../components/ToolLayout.vue'
@@ -7,14 +18,7 @@ const output = ref('')
 const error = ref('')
 
 const encode = () => {
-  const htmlEntities: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }
-  output.value = input.value.replace(/[&<>"']/g, char => htmlEntities[char])
+  output.value = input.value.replace(/[&<>"']/g, (char) => HTML_ENTITIES[char])
   error.value = ''
 }
 
