@@ -14,12 +14,12 @@ export async function createZip(files: ZipFile[]) {
       return [file.name, data] as const;
     }),
   );
-  return new Blob([zipSync(Object.fromEntries(entries), { level: 0 }) as BlobPart], { type: 'application/zip' });
+  return new Blob([zipSync(Object.fromEntries(entries), { level: 0 })], { type: 'application/zip' });
 }
 
 export async function readZip(file: Blob) {
   const entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
-  return new Map(Object.entries(entries).map(([name, data]) => [name, new Blob([data as BlobPart])]));
+  return new Map(Object.entries(entries).map(([name, data]) => [name, new Blob([data])]));
 }
 
 /** 触发浏览器下载（替代 file-saver 的 saveAs） */
@@ -28,6 +28,9 @@ export function downloadBlob(blob: Blob, fileName: string) {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = fileName;
+  document.body.appendChild(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  // 延迟 revoke：部分浏览器（Firefox/Safari）在下载尚未开始时 revoke 会导致下载失败
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

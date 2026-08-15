@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { assetsApi } from '../../lib/assets-api'
@@ -27,14 +27,29 @@ const KIND_TABS: Array<{ value: AssetKind | ''; label: string }> = [
 
 const kind = ref<AssetKind | ''>('')
 const keyword = ref('')
+const debouncedKeyword = ref('')
 const page = ref(1)
 
+// 搜索防抖：连续输入不每键发请求，停止 300ms 后才进 queryKey
+let keywordTimer: ReturnType<typeof setTimeout> | null = null
+watch(keyword, (value) => {
+  if (keywordTimer) clearTimeout(keywordTimer)
+  keywordTimer = setTimeout(() => {
+    debouncedKeyword.value = value
+    page.value = 1
+  }, 300)
+})
+
+onBeforeUnmount(() => {
+  if (keywordTimer) clearTimeout(keywordTimer)
+})
+
 const { data, isLoading } = useQuery({
-  queryKey: ['assets', kind, keyword, page],
+  queryKey: ['assets', kind, debouncedKeyword, page],
   queryFn: () =>
     assetsApi.list({
       kind: kind.value || undefined,
-      keyword: keyword.value || undefined,
+      keyword: debouncedKeyword.value || undefined,
       page: page.value,
       limit: PAGE_SIZE,
     }),
@@ -80,6 +95,8 @@ const handleFileChange = (event: Event) => {
 
 const createMutation = useMutation({
   mutationFn: async () => {
+    // await 前捕获文件引用：上传期间抽屉仍可操作，避免跨 await 后 createFile 已变 null
+    const file = createFile.value
     const tags = createForm.tags
       .split(/[,，]/)
       .map((t) => t.trim())
@@ -94,11 +111,11 @@ const createMutation = useMutation({
         note: createForm.note.trim() || undefined,
       })
     }
-    // 图片/视频：先上传媒体再建素材
-    const media = await mediaApi.upload(createFile.value!)
+    // 图片/视频：先上传媒体再建素材（submitCreate 已校验 file 非空）
+    const media = await mediaApi.upload(file!)
     return assetsApi.create({
       kind: createForm.kind,
-      title: createForm.title.trim() || createFile.value!.name,
+      title: createForm.title.trim() || file!.name,
       mediaId: media.id,
       tags,
       source: createForm.source.trim() || undefined,
@@ -145,15 +162,22 @@ const handleExportZip = async () => {
   exportingZip.value = true
   zipMessage.value = null
   try {
-    // 拉全量（当前筛选条件下的第一页大容量）
-    const all = await assetsApi.list({
-      kind: kind.value || undefined,
-      keyword: keyword.value || undefined,
-      page: 1,
-      limit: 500,
-    })
-    const count = await exportAssets(all.items)
-    zipMessage.value = `已导出 ${count} 个素材`
+    // 拉全量：按 total 翻页（500/页），避免大筛选结果静默截断在第一页
+    const all: Asset[] = []
+    let total = Infinity
+    while (all.length < total) {
+      const pageData = await assetsApi.list({
+        kind: kind.value || undefined,
+        keyword: debouncedKeyword.value || undefined,
+        page: Math.floor(all.length / 500) + 1,
+        limit: 500,
+      })
+      all.push(...pageData.items)
+      total = pageData.total
+      if (!pageData.items.length) break // 防御：后端异常时避免死循环
+    }
+    const count = await exportAssets(all)
+    zipMessage.value = `已导出 ${count} 个素材${count < total ? `（${total - count} 个因下载失败跳过）` : ''}`
   } catch {
     zipMessage.value = '导出失败，请稍后重试'
   } finally {
@@ -306,7 +330,6 @@ const deleteMutation = useMutation({
               v-model="keyword"
               class="od-input !pl-9 !w-56 max-sm:!w-full"
               placeholder="搜索标题 / 内容 / 备注"
-              @input="page = 1"
             >
           </div>
         </div>

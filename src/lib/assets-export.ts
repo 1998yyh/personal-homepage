@@ -86,12 +86,21 @@ export async function importAssets(file: Blob) {
 
   if (manifestBlob) {
     // 有清单：按清单还原（保留标题/标签/来源/备注）
-    const manifest = JSON.parse(await manifestBlob.text()) as AssetsExportFile;
+    let manifest: AssetsExportFile;
+    try {
+      manifest = JSON.parse(await manifestBlob.text()) as AssetsExportFile;
+    } catch {
+      throw new Error('导出清单解析失败，文件可能已损坏');
+    }
     for (const entry of manifest.assets) {
       const blob = entries.get(entry.path);
       if (!blob) continue;
-      await importOne(entry, blob);
-      imported += 1;
+      try {
+        await importOne(entry, blob);
+        imported += 1;
+      } catch {
+        // 单个素材导入失败不中断整体（与导出侧逐项跳过对称）
+      }
     }
     return imported;
   }
@@ -100,16 +109,20 @@ export async function importAssets(file: Blob) {
   for (const [path, blob] of entries) {
     const title = path.split('/').pop()?.replace(/\.[^.]+$/, '') || path;
     const ext = path.split('.').pop()?.toLowerCase() || '';
-    if (ext === 'txt' || ext === 'md') {
-      await importOne({ title, kind: 'text', tags: [], source: '', note: '', path }, blob);
-    } else if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) {
-      await importOne({ title, kind: 'image', tags: [], source: '', note: '', path }, blob);
-    } else if (['mp4', 'webm'].includes(ext)) {
-      await importOne({ title, kind: 'video', tags: [], source: '', note: '', path }, blob);
-    } else {
-      continue;
+    try {
+      if (ext === 'txt' || ext === 'md') {
+        await importOne({ title, kind: 'text', tags: [], source: '', note: '', path }, blob);
+      } else if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) {
+        await importOne({ title, kind: 'image', tags: [], source: '', note: '', path }, blob);
+      } else if (['mp4', 'webm'].includes(ext)) {
+        await importOne({ title, kind: 'video', tags: [], source: '', note: '', path }, blob);
+      } else {
+        continue;
+      }
+      imported += 1;
+    } catch {
+      // 单个素材导入失败不中断整体
     }
-    imported += 1;
   }
   return imported;
 }
