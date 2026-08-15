@@ -5,6 +5,12 @@ import type { ApiFormat } from './ai-generation'
 /** 内置工具名（后端 tool-registry 注册，无列表接口，前端硬编码） */
 export type BuiltinToolName = 'web_search' | 'calculator'
 
+/** 内置工具中文名（展示用唯一来源：AgentsPage / ToolCallCard / AgentFormDrawer 共用，新增工具只改这一处） */
+export const BUILTIN_TOOL_LABELS: Record<BuiltinToolName, string> = {
+  web_search: '联网搜索',
+  calculator: '计算器',
+}
+
 /** MCP Server 配置（v1 前端不暴露表单，仅类型占位） */
 export interface McpServerConfig {
   name: string

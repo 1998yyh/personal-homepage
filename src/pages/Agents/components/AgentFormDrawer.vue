@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import type { Agent, AgentPayload, BuiltinToolName } from '../../../types/agent'
+import { BUILTIN_TOOL_LABELS } from '../../../types/agent'
 import { channelsApi } from '../../../lib/channels-api'
 import AppIcon from '../../../components/AppIcon.vue'
 
@@ -19,11 +20,11 @@ const emit = defineEmits<{
 
 const isEdit = computed(() => !!props.agent)
 
-// 内置工具展示映射（后端无列表接口，前端硬编码——设计文档 §2）
-const BUILTIN_TOOLS: Array<{ name: BuiltinToolName; label: string; desc: string }> = [
-  { name: 'web_search', label: '联网搜索', desc: '让 Agent 可以搜索互联网获取实时信息' },
-  { name: 'calculator', label: '计算器', desc: '精确数学求值，弥补大模型算数弱项' },
-]
+// 内置工具展示映射（后端无列表接口，前端硬编码——设计文档 §2；中文名来自共享常量 BUILTIN_TOOL_LABELS）
+const BUILTIN_TOOLS: Array<{ name: BuiltinToolName; label: string; desc: string }> = ([
+  { name: 'web_search', desc: '让 Agent 可以搜索互联网获取实时信息' },
+  { name: 'calculator', desc: '精确数学求值，弥补大模型算数弱项' },
+] as const).map((t) => ({ ...t, label: BUILTIN_TOOL_LABELS[t.name] }))
 
 const form = reactive({
   name: '',

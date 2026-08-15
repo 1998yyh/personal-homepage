@@ -15,12 +15,13 @@ const route = useRoute()
 const router = useRouter()
 const queryClient = useQueryClient()
 
-const agentId = route.params.id as string
+// 响应式取路由参数：同组件实例内 /agents/a → /agents/b 直接切换时 queryKey/请求随动
+const agentId = computed(() => String(route.params.id || ''))
 
 // ---- Agent 详情（标题展示 + 停用判断） ----
 const { data: agent, error: agentError } = useQuery({
-  queryKey: ['agents', agentId],
-  queryFn: () => agentsApi.getById(agentId),
+  queryKey: computed(() => ['agents', agentId.value]),
+  queryFn: () => agentsApi.getById(agentId.value),
 })
 const agentDisabled = computed(
   () => (agentError.value as { response?: { status?: number } } | null)?.response?.status === 410,
@@ -34,8 +35,8 @@ const {
   fetchNextPage: fetchMoreConvs,
   isFetchingNextPage: convFetchingMore,
 } = useInfiniteQuery({
-  queryKey: ['conversations', agentId],
-  queryFn: ({ pageParam }) => agentsApi.listConversations(agentId, pageParam),
+  queryKey: computed(() => ['conversations', agentId.value]),
+  queryFn: ({ pageParam }) => agentsApi.listConversations(agentId.value, pageParam),
   initialPageParam: 1,
   getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
 })
@@ -45,11 +46,12 @@ const conversations = computed(() => convData.value?.pages.flatMap((p) => p.item
 const selectedId = ref<string | null>(null)
 const isDraft = ref(false)
 
-// 列表加载后：优先按 ?c= 定位，无则自动选最近一个（immediate 必须——CLAUDE.md 规范）
+// 列表加载后：优先按 ?c= 定位，无则自动选最近一个（immediate 必须——CLAUDE.md 规范）。
+// 草稿态（用户已点「新对话」）不覆盖：避免占位项与真实选中并存
 watch(
   conversations,
   (list) => {
-    if (!list.length || selectedId.value) return
+    if (!list.length || selectedId.value || isDraft.value) return
     const fromQuery = list.find((c) => c.id === route.query.c)
     selectedId.value = fromQuery?.id ?? list[0].id
   },
@@ -153,6 +155,13 @@ watch(input, () => {
   })
 })
 
+// Enter 发送：IME 组合输入（isComposing）时放行不拦截，避免中文候选确认被吞
+const onEnterKey = (event: KeyboardEvent) => {
+  if (event.isComposing) return
+  event.preventDefault()
+  void sendMessage()
+}
+
 const sendMessage = async () => {
   const content = input.value.trim()
   if (!content || stream.streaming.value || agentDisabled.value) return
@@ -162,7 +171,7 @@ const sendMessage = async () => {
   let convId = activeConvId.value
   if (!convId) {
     try {
-      const conv: Conversation = await agentsApi.createConversation(agentId)
+      const conv: Conversation = await agentsApi.createConversation(agentId.value)
       convId = conv.id
     } catch {
       sendError.value = '创建会话失败，请稍后重试'
@@ -170,7 +179,7 @@ const sendMessage = async () => {
     }
     isDraft.value = false
     selectedId.value = convId
-    queryClient.invalidateQueries({ queryKey: ['conversations', agentId] })
+    queryClient.invalidateQueries({ queryKey: ['conversations', agentId.value] })
   }
 
   input.value = ''
@@ -181,7 +190,7 @@ const sendMessage = async () => {
     // 流正常结束：消息列表归位后清理临时状态（历史里已有 user+assistant）
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ['messages', convId] }),
-      queryClient.invalidateQueries({ queryKey: ['conversations', agentId] }),
+      queryClient.invalidateQueries({ queryKey: ['conversations', agentId.value] }),
     ]).then(() => {
       pendingUserMessage.value = null
       stream.reset()
@@ -213,7 +222,7 @@ const retrySend = async () => {
   await stream.retry(convId, () => {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ['messages', convId] }),
-      queryClient.invalidateQueries({ queryKey: ['conversations', agentId] }),
+      queryClient.invalidateQueries({ queryKey: ['conversations', agentId.value] }),
     ]).then(() => {
       pendingUserMessage.value = null
       stream.reset()
@@ -373,6 +382,7 @@ onBeforeUnmount(() => stream.abort())
                   :content="msg.content"
                   :tool-calls="msg.toolCalls"
                   :total-tokens="msg.totalTokens"
+                  :agent-name="agent?.name || 'AI 助手'"
                 />
 
                 <!-- 发送中的 user 消息（乐观展示） -->
@@ -393,6 +403,7 @@ onBeforeUnmount(() => stream.abort())
                   :total-tokens="stream.streamingMessage.value.totalTokens"
                   :streaming="stream.streaming.value"
                   :has-error="stream.status.value === 'error'"
+                  :agent-name="agent?.name || 'AI 助手'"
                 />
 
                 <!-- 错误与重试 -->
@@ -443,7 +454,7 @@ onBeforeUnmount(() => stream.abort())
                 class="w-full bg-transparent resize-none outline-none px-4 pt-3.5 text-sm text-fg placeholder:text-muted/70 max-h-[180px]"
                 :placeholder="agentDisabled ? '该 Agent 已停用，无法发送' : '输入消息…（Enter 发送，Shift+Enter 换行）'"
                 :disabled="stream.streaming.value || agentDisabled || (!activeConvId && !isDraft)"
-                @keydown.enter.exact.prevent="!$event.isComposing && sendMessage()"
+                @keydown.enter.exact="onEnterKey"
               />
               <div class="flex items-center px-3 pb-3 pt-1.5">
                 <!-- 流式中：停止按钮 -->

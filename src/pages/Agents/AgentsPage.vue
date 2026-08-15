@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import agentsApi from '../../lib/agents-api'
-import type { Agent, AgentPayload } from '../../types/agent'
+import { BUILTIN_TOOL_LABELS, type Agent, type AgentPayload, type BuiltinToolName } from '../../types/agent'
 import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import AgentFormDrawer from './components/AgentFormDrawer.vue'
@@ -63,11 +63,6 @@ const deleteMutation = useMutation({
 const openDelete = (agent: Agent) => {
   deleteMutation.reset() // 清掉上次删除失败的错误态
   deletingAgent.value = agent
-}
-
-const TOOL_LABELS: Record<string, string> = {
-  web_search: '联网搜索',
-  calculator: '计算器',
 }
 </script>
 
@@ -233,7 +228,7 @@ const TOOL_LABELS: Record<string, string> = {
               :key="tool"
               class="px-2 py-1 rounded-md bg-fg/5 text-muted text-xs"
             >
-              {{ TOOL_LABELS[tool] ?? tool }}
+              {{ BUILTIN_TOOL_LABELS[tool as BuiltinToolName] ?? tool }}
             </span>
           </div>
 
