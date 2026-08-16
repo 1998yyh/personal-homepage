@@ -53,10 +53,16 @@ src/
         ├── components/
         │   ├── AgentFormDrawer.vue  # 创建/编辑抽屉（Esc 关闭，高级配置默认折叠）
         │   ├── ConversationList.vue # 左侧会话列表（前端搜索 + 草稿占位项 + 滚动加载）
-        │   ├── MessageBubble.vue    # 消息气泡（user=accent-soft 纯文本 / assistant=markdown，时间片节流）
-        │   └── ToolCallCard.vue     # 工具调用卡片（流式 running / 历史 done）
+        │   ├── MessageBubble.vue    # 消息气泡（user=accent-soft 纯文本 / assistant=markdown 块级增量渲染）
+        │   ├── MarkdownBlock.vue    # 流式渲染最小单元：单块 v-html，text 不变则 DOM 不动
+        │   ├── ReasoningRow.vue     # 思维链折叠行：流式=最新行滚动+shimmer / 落定=首行摘要
+        │   ├── ToolCallCard.vue     # 工具调用卡片：running/done/error/interrupted 四态 + SUMMARY_KEYS 参数摘要
+        │   ├── TaskToolCard.vue     # delegate_task 子代理卡：内嵌子轨迹（ReasoningRow+子工具卡，live-only）
+        │   ├── BackgroundTasksPill.vue # 头部后台任务 pill + 弹层（live 时 5s 轮询，完成跃迁 invalidate 消息）
+        │   ├── MessageQueueStrip.vue   # 排队消息条（流式中发送的消息，自然结束后按序自动续发）
+        │   └── SlashCommandMenu.vue    # 斜杠命令菜单（/clear、/stop）
         └── utils/
-            └── groupMessages.ts    # 历史消息归组：role='tool' 配对进 assistant.toolCalls
+            └── groupMessages.ts    # 历史消息归组：role='tool' 配对进 assistant.toolCalls（含 isError→error 态）
         # 接口在 lib/agents-api.ts，类型在 types/agent.ts，流式在 composables/useAgentStream.ts
 ```
 
@@ -66,7 +72,7 @@ src/
 
 - 所有请求发往 `import.meta.env.VITE_API_URL`（见 `.env.example`），缺省回退到硬编码生产地址 `http://43.140.214.49:3000/api`（`src/lib/api.ts:3`）。
 - 后端端点：`/api/auth/*`（注册/登录/刷新/资料）、`/api/daily-reports/*`、`/api/agents/*`（CRUD）与 `/api/conversations/*`（会话/消息/流式）、`/api/canvas-projects/*`（文档 PUT 带 baseVersion 乐观锁 + `/version` 轻量比对）、`/api/ai-generation/*`（images 同步 / videos+tasks 异步轮询）、`/api/ai-channels/*`、`/api/prompts/*`（含 sources 子资源与 refresh）、`/api/assets/*`、`/api/media/*`（上传/查询；文件本体在 `/uploads/`，不在 `/api` 前缀下）、`/api/stock-signals/*`（POST scans 需登录，结果与日期公开）、`/api/mcp-servers/*`、`/api/skills/*`。
-- Agents API 分页常量（`src/lib/agents-api.ts`）：`AGENTS_LIMIT=100`（一次拉全）、`CONVERSATIONS_LIMIT=20`（滚动加载）、`MESSAGES_LIMIT=30`（向上翻页）。删除会话走 `DELETE /conversations/:id`（不在 `/agents/` 下）。
+- Agents API 分页常量（`src/lib/agents-api.ts`）：`AGENTS_LIMIT=100`（一次拉全）、`CONVERSATIONS_LIMIT=20`（滚动加载）、`MESSAGES_LIMIT=30`（向上翻页）。删除会话走 `DELETE /conversations/:id`（不在 `/agents/` 下）。后台任务走 `GET /conversations/:id/background-tasks`。
 - 本地开发需后端 CORS 放行 `http://localhost:5173`（2026-07 迁移验收时后端未放行本地源，联调前需先确认）。
 
 ## 核心架构：JWT 认证链路
@@ -129,6 +135,20 @@ message_start → text_delta* → message_end → (tool_use → tool_result)* �
 
 **message_end 不是流结束信号**（只是本轮定稿），流结束以 axios 请求完成（连接关闭）为准。`message_end` 的 `content` 字段：中间轮（工具调用轮）常为空串，仅非空时覆盖临时气泡文本；最终一轮的 `content` 才是最终回答。
 
+**扩展事件**（2026-08 DSH 交互移植）：`tool_result.data.isError`（后端 tools_node catch 到的失败/超时，卡片红色 error 态）；`sub_event { callId, type, data }`（delegate_task 子代理的完整事件流，经回调旁路注入合并队列，前端按 callId 路由进父卡片 `subTrace`，未知 callId 防御性忽略）。后端侧关键不变式：子代理运行带 `metadata.subAgentRun=true` 标记，外层 pump 丢弃带标事件（LangChain callback 传播会让子图 streamEvents 全部冒泡到外层，不过滤会把子代理轨迹持久化成顶层气泡）；`iterations: 0` 必须随每轮重置（checkpoint 会恢复历史累计值，超过 maxIterations 后会话永久跳过 tools_node）。
+
+### 轮次计时 / 队列 / 斜杠 / 停止残影（DSH 移植）
+
+- **TurnStatus/TurnTail**（AgentChatPage）：status→streaming 边沿锚定 `performance.now()`，>15s 显示「正在深入思考… m:ss」；done 时把 `stream.turnMetrics`（elapsedMs/ttftMs/totalTokens）存入页级 ref 渲染页脚（tok/s 含输入 token，是近似值），下次发送/切会话清空；历史轮次无页脚（刻意不持久化）。
+- **排队消息**：`sendMessage` 顶部 `if (stream.streaming.value) { queuedMessages.push; return }`；status watch 的 done 边沿 shift 一条 nextTick 重进 sendMessage（**abort/error 不续发**，队列保留）。删行/点行编辑走 MessageQueueStrip。
+- **斜杠命令**：输入 `/` 开头且无空白弹 SlashCommandMenu，Enter 执行高亮项（`/clear`→startDraft、`/stop`→stopStreaming 仅流式中可用），Esc 清空输入。
+- **停止残影**：`stopStreaming` 用 `stream.abort({ keepPartial: true })`——先把仍 running 的卡片（含嵌套）定格为 interrupted 并保留气泡，不做自动 reset（本地 refetch ~100ms，即清会看不到中断态）；残影随下一次 send 或切会话/草稿（无条件 `stream.abort()`）消散。已知边角：后端断连时**用户消息也不落库**（persist 在流结束后），停止后该轮整体消失；若后端恰好持久化了部分 assistant 内容，历史与残影短暂双显。
+
+### ⚠️ 两类已实测复现的竞态（改动发送/断流链路时必读）
+
+1. **归位 reset 踩新一轮**：`onStreamEnd` 的 invalidate 是异步的，done 边沿的队列续发会在 refetch 完成前开新流；迟到的 `stream.reset()` 会把新一轮 status 踩回 idle、清空其流式气泡与乐观用户气泡（实测：续发轮结束后状态机卡死、消息列表不刷新）。防线：sendMessage 的 `sendSeq` 代际令牌，归位清理只在「仍是最新一轮」时执行。
+2. **后台任务 pill 首显**：pill 的 useQuery 只在有 live 任务时 5s 轮询，首查返回空则永远停轮询——run_background_task 在流内建行，必须靠流结束时 invalidate `['background-tasks', convId]`（sendMessage onStreamEnd + stopStreaming 都加了）触发首显。
+
 ### 草稿会话状态机（懒创建）
 
 ```
@@ -185,30 +205,21 @@ userNearBottom = scrollHeight - scrollTop - clientHeight < 80  // 阈值 80px
 - 上翻看历史时（`userNearBottom=false`）：不被新内容拽回去
 - 点「回到底部」悬浮钮 / 自己发送消息：强制 `userNearBottom=true` + `scrollTop=scrollHeight`
 
-### 流式渲染节流（MessageBubble）
+### 流式渲染（useAgentStream + MessageBubble，对齐 deepseek-harness 设计）
 
-`props.content` 每个 delta 都变。markdown 无法安全增量渲染（代码围栏会改变后文解析），只能整段重解析——若每个 delta 都渲一次，长回答下会 O(n²) 卡顿。故按时间片节流（约 90ms ≈ 11fps，肉眼已顺滑）：
+三层结构，改任一环需理解全图：
 
-```ts
-watch(() => props.content, (text) => {
-  if (!props.streaming) { displayText.value = text; return; }
-  if (timer != null) return;  // 本时间片内已排程，等它触发时取最新全文
-  timer = setTimeout(() => {
-    timer = null;
-    displayText.value = props.content;
-  }, 90);
-});
-```
-
-流结束（`streaming` true → false）时立即补渲最终全文，不留半截；`onBeforeUnmount` 清理未触发的 timer。
+1. **数据层 rAF 合帧**（`useAgentStream.ts`）：SSE delta 先写入非响应式 `draft`，每帧最多 `publish` 一次到 reactive `streamingMessage`（避免每个网络 chunk 触发整条响应式链路）。流结束/出错/中断前必须 `flushPublish()` 冲刷末帧。
+2. **⚠️ axios 进度回调陷阱**：axios 的 `progressEventReducer` 把 `onDownloadProgress` 节流到 3 次/秒，且延迟触发时原生事件的 `currentTarget` 已被置 null（DOM 规范）——读 `responseText` 必须用 `event.event.target`。拿到 XHR 后另挂原始 `progress` listener（`consume`）以获得全频率增量，axios 回调只做捕获通道。
+3. **块级增量渲染**（`MessageBubble.vue` + `MarkdownBlock.vue`）：流式文本按「围栏感知的空行」切成顶层块，`key = 块起始源码偏移`（append-only 流下不变）；已闭合块的 text 不变 → Vue props 浅比较跳过子组件更新 → 其 parse 与 DOM 只发生一次，每帧只有活跃尾块重渲。流结束（`streaming` true → false）整文单次重渲（self-heal 跨块引用/松散列表）。历史消息直接整文渲染。
 
 首 token/工具卡片到达前展示「正在思考」占位（三点弹跳动画，`.thinking-dot`），避免空气泡像卡死。
 
 ### 核心约束
 
-- **切换会话 / 离开页面必须断流**：`stream.abort()` 同步中止 AbortController，置 `status='idle'` 清空临时气泡（`onBeforeUnmount` / `selectConversation` 内调用）。
-- **发送中禁止再发**：`if (stream.streaming.value) return` 拦截（后端串行约束，并发会乱序）。
-- **停止生成后必须 invalidate**：后端落库时机后移，断流时已生成内容可能已持久化也可能被丢弃，以 `invalidateQueries` 拉回的为准。
+- **切换会话 / 离开页面必须断流**：`stream.abort()` 同步中止 AbortController，置 `status='idle'` 并清空临时气泡/残影（`onBeforeUnmount` / `selectConversation` 内调用，无条件）；停止生成走 `abort({ keepPartial: true })` 保留中断残影。
+- **发送中禁止再发**：流式中的发送进 `queuedMessages` 排队（后端串行约束，并发会乱序），done 边沿自动续发。
+- **停止生成后必须 invalidate**：后端落库时机后移，断流时已生成内容（含用户消息）可能已持久化也可能被丢弃，以 `invalidateQueries` 拉回的为准。
 - **删除会话时选中态降级**：若删除的是 `selectedId`，置空后 `conversations` 的 watch（`immediate: true`）会自动选中剩下的最近一个。
 
 ## 样式规范
@@ -230,8 +241,8 @@ watch(() => props.content, (text) => {
 - 类型用 `import type` 导入；改完代码跑 `pnpm build` 验证类型。
 - 退出登录入口必须 `logout()` 后显式 `router.push('/login')`（守卫不拦原地状态变化）。
 - 日报类「列表加载后自动选中第一条」场景用带 `immediate: true` 的 watch。
-- **切换会话 / 离开 AgentChatPage 时必须调 `stream.abort()`**（切换：`selectConversation` / `startDraft`；离开：`onBeforeUnmount`）。
-- 发送消息前检查 `stream.streaming.value`，流式进行中禁止并发发送（后端串行约束）。
+- **切换会话 / 离开 AgentChatPage 时必须调 `stream.abort()`**（切换：`selectConversation` / `startDraft`；离开：`onBeforeUnmount`）——无条件调用（abort 内部幂等），顺带清停止残影；只有「停止生成」用 `abort({ keepPartial: true })` 保留中断残影。
+- 发送消息前检查 `stream.streaming.value`，流式进行中禁止并发发送（后端串行约束）——流式中的用户输入走 queuedMessages 排队，done 边沿自动续发。
 - 停止生成（`stopStreaming`）后必须 `invalidateQueries` 拉最新消息，以后端落库结果为准。
 
 ### ⚠️ 需先询问
@@ -255,5 +266,5 @@ watch(() => props.content, (text) => {
 3. 涉及鉴权/路由的改动，浏览器手动验证：匿名可直接访问所有页面且 Navbar 显示「登录」；登录 → 回 `redirect` 来源页；退出 → 回 `/login` 且 localStorage 双 token 清空；token 过期 → 自动刷新无感继续（Network 面板可见 `/auth/refresh`）；刷新失败 → 静默登出留在当前页（Navbar 变回「登录」）。
 
 ---
-**版本**: v3.6（补录 StockSignals/McpServers/Skills 次级板块 + 后端端点清单补全）
-**最后更新**: 2026-08-08
+**版本**: v3.7（DSH 交互移植：思维链行/工具四态/子代理嵌套轨迹/后台任务 pill/排队/斜杠命令/轮次计时 + 两类竞态防线）
+**最后更新**: 2026-08-16
