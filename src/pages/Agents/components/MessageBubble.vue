@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { renderMarkdown } from '../../../lib/markdown'
 import { useAuthStore } from '../../../stores/auth'
 import type { GroupedToolCall } from '../utils/groupMessages'
 import AppIcon from '../../../components/AppIcon.vue'
+import MarkdownBlock from './MarkdownBlock.vue'
+import ReasoningRow from './ReasoningRow.vue'
+import TaskToolCard from './TaskToolCard.vue'
 import ToolCallCard from './ToolCallCard.vue'
 
 const props = withDefaults(
   defineProps<{
     role: 'user' | 'assistant'
     content: string
+    /** 推理模型的思考过程（流式实时累计 / 历史来自 DB），非推理模型为 null */
+    reasoning?: string | null
     toolCalls?: GroupedToolCall[]
     totalTokens?: number | null
     /** 流式中：启用时间片节流重渲 + 打字光标 */
@@ -21,6 +26,7 @@ const props = withDefaults(
   }>(),
   {
     agentName: 'AI 助手',
+    reasoning: null,
     toolCalls: () => [],
     totalTokens: null,
     streaming: false,
@@ -30,55 +36,84 @@ const props = withDefaults(
 
 const auth = useAuthStore()
 
-// 流式渲染：props.content 每个 delta 都变。markdown 无法安全增量渲染（代码围栏会改变后文
-// 解析），只能整段重解析——若每个 delta / 每帧都渲一次，长回答下会 O(n²) 卡顿。
-// 故按时间片节流（~60ms ≈ 16fps，接近逐字手感），大幅减少全量重解析次数；
-// 流结束时立即 flush 出最终全文，不留半截。
-const RENDER_INTERVAL = 60
-const displayText = ref(props.content)
-let timer: ReturnType<typeof setTimeout> | null = null
-
-const flush = () => {
-  timer = null
-  displayText.value = props.content
+// ── 流式块级增量渲染（对齐 deepseek-harness 的设计） ──────────────
+// 流式文本切成「顶层块」数组（围栏感知的空行切分），key = 块起始源码偏移
+// （append-only 流下不变）。已闭合块的 text 不再变化，MarkdownBlock 子组件
+// props 浅比较跳过更新——其 parse 与 DOM 在整个流中只发生一次；每帧只有
+// 活跃尾块重渲。避免了「v-html 整段 innerHTML 替换」随回答变长的 O(n²) 重建。
+// 流结束后整文单次重渲（self-heal：修复跨块的引用链接/松散列表等边界）。
+interface Block {
+  key: number
+  text: string
 }
 
+const streamBlocks = shallowRef<Block[]>([])
+const fullHtml = ref('')
+let carried: Block[] = []
+
+/** 围栏感知的顶层块切分：围栏外空行为块界，代码围栏内的空行不切 */
+function splitBlocks(text: string): Block[] {
+  const lines = text.split('\n')
+  const blocks: Block[] = []
+  let fence: string | null = null // 未闭合围栏的标记符（` 或 ~）
+  let blockStart = 0
+  let pos = 0
+
+  for (const line of lines) {
+    const trimmed = line.trimStart()
+    const marker = /^(`{3,}|~{3,})/.exec(trimmed)
+    if (fence) {
+      if (marker && marker[1][0] === fence[0]) fence = null
+    } else if (marker) {
+      fence = marker[1][0]
+    } else if (trimmed === '') {
+      if (pos > blockStart) blocks.push({ key: blockStart, text: text.slice(blockStart, pos) })
+      blockStart = pos + line.length + 1
+    }
+    pos += line.length + 1
+  }
+  if (blockStart < text.length) blocks.push({ key: blockStart, text: text.slice(blockStart) })
+  return blocks
+}
+
+/** 数据层已按帧合帧（useAgentStream），这里每帧重切一次；复用未变块的引用避免子组件更新 */
+function flushBlocks() {
+  const prev = new Map(carried.map((b) => [b.key, b]))
+  const next = splitBlocks(props.content).map((b) => {
+    const old = prev.get(b.key)
+    return old && old.text === b.text ? old : b
+  })
+  carried = next
+  streamBlocks.value = next
+}
+
+/** 非流式/流结束：整文单次渲染 */
+function renderFull(text: string) {
+  carried = []
+  streamBlocks.value = []
+  fullHtml.value = text ? renderMarkdown(text) : ''
+}
+
+// 历史消息挂载即渲染全文
+if (!props.streaming && props.content) {
+  renderFull(props.content)
+}
+
+// 合并监听 content 与 streaming：流式中按帧增量切块；流结束（或历史内容变化）整文重渲
 watch(
-  () => props.content,
-  (text) => {
+  () => [props.content, props.streaming],
+  () => {
     if (!props.streaming) {
-      // 非流式（历史消息 / 流已结束）：同步出全文
-      if (timer) { clearTimeout(timer); timer = null }
-      displayText.value = text
+      renderFull(props.content)
       return
     }
-    if (timer != null) return // 本时间片内已排程，等它触发时取最新全文
-    timer = setTimeout(flush, RENDER_INTERVAL)
+    flushBlocks()
   },
 )
 
-// streaming 由 true → false 时（流结束）立即补渲最终全文，避免停在上一个时间片的半截内容
-watch(
-  () => props.streaming,
-  (isStreaming) => {
-    if (!isStreaming) {
-      if (timer) { clearTimeout(timer); timer = null }
-      displayText.value = props.content
-    }
-  },
-)
-
-onBeforeUnmount(() => {
-  if (timer) clearTimeout(timer)
-})
-
-const html = computed(() =>
-  props.role === 'assistant' ? renderMarkdown(displayText.value) : '',
-)
-
-// 首 token/工具卡片到达前的「正在思考」占位（Kimi 式，避免空气泡像卡死）
+// 首 token/工具卡片/思考内容到达前的「正在思考」占位（Kimi 式，避免空气泡像卡死）
 const thinking = computed(
-  () => props.streaming && !props.content && !props.toolCalls?.length,
+  () => props.streaming && !props.content && !props.toolCalls.length && !props.reasoning,
 )
 
 const userInitial = computed(() => auth.user?.username?.charAt(0).toUpperCase() || 'U')
@@ -161,20 +196,40 @@ function handleCodeCopyClick(event: MouseEvent) {
         >{{ totalTokens.toLocaleString() }} tokens</span>
       </div>
 
-      <!-- 工具调用卡片（实时流式与历史共用） -->
+      <!-- 工具调用卡片（实时流式与历史共用；delegate_task 走子代理轨迹卡片） -->
       <div
-        v-if="toolCalls?.length"
+        v-if="toolCalls.length"
         class="flex flex-col gap-2 mb-2"
       >
-        <ToolCallCard
+        <template
           v-for="call in toolCalls"
           :key="call.id"
-          :name="call.name"
-          :args="call.args"
-          :content="call.content"
-          :status="call.status"
-        />
+        >
+          <TaskToolCard
+            v-if="call.name === 'delegate_task'"
+            :name="call.name"
+            :args="call.args"
+            :content="call.content"
+            :status="call.status"
+            :sub-trace="call.subTrace"
+          />
+          <ToolCallCard
+            v-else
+            :name="call.name"
+            :args="call.args"
+            :content="call.content"
+            :status="call.status"
+          />
+        </template>
       </div>
+
+      <!-- 思考过程（推理模型；折叠头行带实时摘要 + shimmer，见 ReasoningRow） -->
+      <ReasoningRow
+        v-if="reasoning"
+        class="mb-2"
+        :text="reasoning"
+        :streaming="streaming"
+      />
 
       <!-- user 消息：accent-soft 气泡纯文本；assistant：无底色 markdown -->
       <div
@@ -198,13 +253,26 @@ function handleCodeCopyClick(event: MouseEvent) {
           <span class="thinking-dot d3 w-[6px] h-[6px] rounded-full bg-current" />
         </div>
         <template v-else>
-          <!-- eslint-disable vue/no-v-html -->
           <div
             class="markdown-content chat-md text-sm"
             @click="handleCodeCopyClick"
-            v-html="html"
-          />
-          <!-- eslint-enable vue/no-v-html -->
+          >
+            <!-- 流式中：块级增量渲染，已闭合块（key=源码偏移）的 DOM 不再触碰 -->
+            <template v-if="streaming">
+              <MarkdownBlock
+                v-for="block in streamBlocks"
+                :key="block.key"
+                :text="block.text"
+              />
+            </template>
+            <!-- 非流式/流结束：整文单次渲染 -->
+            <!-- eslint-disable vue/no-v-html -->
+            <div
+              v-else
+              v-html="fullHtml"
+            />
+            <!-- eslint-enable vue/no-v-html -->
+          </div>
 
           <!-- 流式 I-beam 光标（打字机闪烁） -->
           <span

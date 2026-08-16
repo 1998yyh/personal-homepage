@@ -5,11 +5,16 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import agentsApi from '../../lib/agents-api'
 import type { Conversation } from '../../types/agent'
 import { useAgentStream } from '../../composables/useAgentStream'
+import type { TurnMetrics } from '../../composables/useAgentStream'
 import { groupMessages } from './utils/groupMessages'
 import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import ConversationList from './components/ConversationList.vue'
 import MessageBubble from './components/MessageBubble.vue'
+import BackgroundTasksPill from './components/BackgroundTasksPill.vue'
+import MessageQueueStrip from './components/MessageQueueStrip.vue'
+import SlashCommandMenu from './components/SlashCommandMenu.vue'
+import type { SlashCommand } from './components/SlashCommandMenu.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -64,17 +69,21 @@ watch(selectedId, (id) => {
 })
 
 const selectConversation = (id: string) => {
-  if (stream.streaming.value) stream.abort() // 切换会话断流
+  stream.abort() // 断流 + 清停止残影（无条件，abort 内部已幂等）
   isDraft.value = false
   selectedId.value = id
+  lastTurnMetrics.value = null // 页脚指标只跟随当前会话的当轮
+  queuedMessages.value = [] // 队列跟随会话，切换即丢弃
   userNearBottom.value = true // 切会话后重新跟随吸底
 }
 
 // ---- 新建会话：懒创建，首条消息发出时才 POST（设计文档 §7） ----
 const startDraft = () => {
-  if (stream.streaming.value) stream.abort()
+  stream.abort() // 同上：断流 + 清停止残影
   selectedId.value = null
   isDraft.value = true
+  lastTurnMetrics.value = null
+  queuedMessages.value = []
   userNearBottom.value = true
   focusInput()
 }
@@ -108,18 +117,124 @@ const stream = useAgentStream()
 /** 发送中的 user 消息（后端流结束才落库，先本地乐观展示） */
 const pendingUserMessage = ref<string | null>(null)
 
+// ---- 轮次状态与计时（DSH TurnStatus/TurnTail 移植） ----
+// 锚点取 status→streaming 边沿（send 内同步置位，与 composable 内 sendAt 相差 <1ms，无需透出）
+const turnAnchorAt = ref<number | null>(null)
+/** 1s tick 驱动 TurnStatus 计时显示 */
+const nowMs = ref(0)
+let tickTimer: ReturnType<typeof setInterval> | null = null
+/** 刚结束那轮的耗时指标（下次发送/切换会话时清空；历史轮次无页脚——刻意不持久化） */
+const lastTurnMetrics = ref<TurnMetrics | null>(null)
+
+watch(stream.status, (s, prev) => {
+  if (s === 'streaming' && prev !== 'streaming') {
+    turnAnchorAt.value = performance.now()
+    nowMs.value = 0
+    tickTimer = setInterval(() => {
+      nowMs.value = performance.now() - (turnAnchorAt.value ?? 0)
+    }, 1000)
+  } else if (prev === 'streaming') {
+    if (tickTimer) {
+      clearInterval(tickTimer)
+      tickTimer = null
+    }
+    turnAnchorAt.value = null
+    // 正常结束：结算页脚指标（abort/error 不展示——那轮没有完整数据）
+    if (s === 'done' && stream.turnMetrics.value) {
+      lastTurnMetrics.value = stream.turnMetrics.value
+    }
+    // 排队消息（DSH QueueDock）：流自然结束才自动续发，abort/error 不续发
+    if (s === 'done' && queuedMessages.value.length) {
+      const nextContent = queuedMessages.value.shift()!
+      nextTick(() => {
+        input.value = nextContent
+        void sendMessage()
+      })
+    }
+  }
+})
+
+/** 本轮已流式时长（仅 streaming 中有意义） */
+const turnElapsedMs = computed(() =>
+  stream.streaming.value && turnAnchorAt.value != null
+    ? Math.max(nowMs.value, performance.now() - turnAnchorAt.value)
+    : 0,
+)
+
+/** TurnStatus 计时格式化：m:ss */
+const formatMmSs = (ms: number) => {
+  const total = Math.floor(ms / 1000)
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
+}
+
 const input = ref('')
 const inputEl = ref<HTMLTextAreaElement | null>(null)
 const messagesEl = ref<HTMLElement | null>(null)
 /** 建会话等发送前置步骤的错误（流内错误走 stream.errorMessage） */
 const sendError = ref<string | null>(null)
 
+// ---- 排队消息（DSH QueueDock 移植）：流式中继续发送的消息排队，流自然结束后按序自动续发 ----
+// 仅 tab 本地（刷新即丢，刻意不做后端持久化）；切换会话/草稿时清空
+const queuedMessages = ref<string[]>([])
+
+const removeQueued = (index: number) => {
+  queuedMessages.value.splice(index, 1)
+}
+
+/** 点排队行：文本回输入框并出队（廉价编辑） */
+const editQueued = (index: number) => {
+  const [msg] = queuedMessages.value.splice(index, 1)
+  input.value = msg
+  focusInput()
+}
+
+// ---- 斜杠命令（DSH 移植极简版）：输入 `/` 开头且无空白时弹菜单 ----
+const slashCommands = computed<SlashCommand[]>(() => [
+  { name: '/clear', description: '清空当前对话，开始新会话', icon: 'plus', enabled: true },
+  { name: '/stop', description: '停止当前生成', icon: 'square', enabled: stream.streaming.value },
+])
+const slashMenuOpen = computed(() => input.value.startsWith('/') && !/\s/.test(input.value.trimEnd()))
+const slashActiveIndex = ref(0)
+watch(input, () => {
+  slashActiveIndex.value = 0 // 输入变化重置高亮
+})
+
+const runSlashCommand = (cmd: SlashCommand) => {
+  input.value = ''
+  if (cmd.name === '/clear') {
+    startDraft()
+  } else if (cmd.name === '/stop') {
+    if (stream.streaming.value) stopStreaming()
+  }
+}
+
+/** 菜单打开时的键盘导航：上下移动高亮（Enter 执行在 onEnterKey 中处理） */
+const onSlashNav = (event: KeyboardEvent) => {
+  if (!slashMenuOpen.value) return
+  const count = slashCommands.value.filter((c) =>
+    c.name.slice(1).startsWith(input.value.slice(1).toLowerCase()),
+  ).length
+  if (!count) return
+  event.preventDefault()
+  slashActiveIndex.value =
+    event.key === 'ArrowUp'
+      ? (slashActiveIndex.value - 1 + count) % count
+      : (slashActiveIndex.value + 1) % count
+}
+
+const onSlashEsc = () => {
+  if (slashMenuOpen.value) input.value = '' // 清空即关闭菜单
+}
+
 // 智能滚动（Kimi 式）：用户在底部附近时新内容才吸底，上翻看历史不被拽回去
 const userNearBottom = ref(true)
+let scrollRaf: number | null = null
 
 const scrollToBottom = (force = false) => {
   if (force) userNearBottom.value = true
-  nextTick(() => {
+  if (scrollRaf != null) return // 本帧已排程，等它触发时取最新 scrollHeight
+  scrollRaf = requestAnimationFrame(() => {
+    scrollRaf = null
     const el = messagesEl.value
     if (el && userNearBottom.value) el.scrollTop = el.scrollHeight
   })
@@ -159,13 +274,37 @@ watch(input, () => {
 const onEnterKey = (event: KeyboardEvent) => {
   if (event.isComposing) return
   event.preventDefault()
+  // 斜杠菜单打开时：Enter 执行高亮命令而非发送
+  if (slashMenuOpen.value) {
+    const q = input.value.slice(1).toLowerCase()
+    const filtered = slashCommands.value.filter((c) => c.name.slice(1).startsWith(q))
+    const cmd = filtered[slashActiveIndex.value] ?? filtered[0]
+    if (cmd) runSlashCommand(cmd)
+    return
+  }
   void sendMessage()
 }
 
+/**
+ * 发送代际令牌：onStreamEnd 里的归位（invalidate→清 pending→stream.reset）是异步的，
+ * 队列自动续发的新一轮可能已先开始——迟到的 reset() 会把新一轮 status 踩回 idle、
+ * 清空它的流式气泡与乐观用户气泡（实测复现：续发轮结束后状态机卡死、消息列表不刷新）。
+ * 只有「仍是最新一轮」才允许做归位清理。
+ */
+let sendSeq = 0
+
 const sendMessage = async () => {
   const content = input.value.trim()
-  if (!content || stream.streaming.value || agentDisabled.value) return
+  if (!content || agentDisabled.value) return
+  // 流式中继续输入：排队等待，流自然结束后自动续发（abort/error 不续发）
+  if (stream.streaming.value) {
+    queuedMessages.value.push(content)
+    input.value = ''
+    return
+  }
+  const mySeq = ++sendSeq
   sendError.value = null
+  lastTurnMetrics.value = null // 新一轮开始，清掉上轮页脚
 
   // 草稿态：先建真实会话
   let convId = activeConvId.value
@@ -188,10 +327,14 @@ const sendMessage = async () => {
 
   await stream.send(convId, content, () => {
     // 流正常结束：消息列表归位后清理临时状态（历史里已有 user+assistant）
+    // background-tasks 一并 invalidate：run_background_task 在流内建行，
+    // pill 的首查若发生在建行之前会返回空且停轮询，靠这里的失效触发首显
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ['messages', convId] }),
       queryClient.invalidateQueries({ queryKey: ['conversations', agentId.value] }),
+      queryClient.invalidateQueries({ queryKey: ['background-tasks', convId] }),
     ]).then(() => {
+      if (mySeq !== sendSeq) return // 队列续发已开新一轮，归位交给那轮自己
       pendingUserMessage.value = null
       stream.reset()
     })
@@ -204,15 +347,19 @@ const sendMessage = async () => {
   focusInput() // 发完把焦点还给输入框，接着聊
 }
 
-// 停止生成：断流后拉一次消息列表，与后端断连时的落库状态对齐
-// （后端落库时机后移，已生成内容可能已持久化也可能被丢弃，以拉回的为准）
+// 停止生成：保留中断残影（running 卡片定格为「已中断」，不让已生成内容凭空消失），
+// 同时拉一次消息列表与后端断连时的落库状态对齐（后端可能已持久化也可能丢弃）。
+// 残影不做自动 reset：本地 refetch 太快（~100ms），即清会让用户根本来不及看到中断态；
+// 残影随下一次 send（send 内重建 streamingMessage）或切换会话（abort 不带 keepPartial）自然消散。
+// 已知边角：若后端恰好持久化了部分 assistant 内容，历史与残影会短暂双显——可接受的取舍。
 const stopStreaming = () => {
   const convId = activeConvId.value
-  stream.abort()
+  stream.abort({ keepPartial: true })
   pendingUserMessage.value = null
   if (convId) {
     queryClient.invalidateQueries({ queryKey: ['messages', convId] })
     queryClient.invalidateQueries({ queryKey: ['conversations', agentId] })
+    queryClient.invalidateQueries({ queryKey: ['background-tasks', convId] })
   }
 }
 
@@ -245,6 +392,7 @@ const deleteMutation = useMutation({
       pendingUserMessage.value = null
       selectedId.value = null
       isDraft.value = false
+      queuedMessages.value = []
     }
     deletingConv.value = null
     queryClient.invalidateQueries({ queryKey: ['conversations', agentId] })
@@ -257,8 +405,12 @@ const openDeleteConv = (conv: Conversation) => {
   deletingConv.value = conv
 }
 
-// 离开页面断流
-onBeforeUnmount(() => stream.abort())
+// 离开页面断流 + 取消挂起的滚动帧/计时器
+onBeforeUnmount(() => {
+  stream.abort()
+  if (scrollRaf != null) cancelAnimationFrame(scrollRaf)
+  if (tickTimer != null) clearInterval(tickTimer)
+})
 </script>
 
 <template>
@@ -301,10 +453,17 @@ onBeforeUnmount(() => stream.abort())
               {{ agent?.modelName }}
             </div>
           </div>
-          <span
-            v-if="agentDisabled"
-            class="ml-auto text-danger text-xs shrink-0"
-          >该 Agent 已停用</span>
+          <div class="ml-auto flex items-center gap-2 shrink-0">
+            <!-- 后台任务 pill（有任务才渲染；running 时呼吸点 + 5s 轮询） -->
+            <BackgroundTasksPill
+              :conversation-id="activeConvId"
+              :agent-id="agentId"
+            />
+            <span
+              v-if="agentDisabled"
+              class="text-danger text-xs"
+            >该 Agent 已停用</span>
+          </div>
         </header>
 
         <!-- 消息区（relative 容器：挂「回到底部」悬浮钮） -->
@@ -380,6 +539,7 @@ onBeforeUnmount(() => stream.abort())
                   :key="msg.id"
                   :role="msg.role"
                   :content="msg.content"
+                  :reasoning="msg.reasoning"
                   :tool-calls="msg.toolCalls"
                   :total-tokens="msg.totalTokens"
                   :agent-name="agent?.name || 'AI 助手'"
@@ -399,12 +559,41 @@ onBeforeUnmount(() => stream.abort())
                   class="anim-rise"
                   role="assistant"
                   :content="stream.streamingMessage.value.text"
+                  :reasoning="stream.streamingMessage.value.reasoning"
                   :tool-calls="stream.streamingMessage.value.toolCalls"
                   :total-tokens="stream.streamingMessage.value.totalTokens"
                   :streaming="stream.streaming.value"
                   :has-error="stream.status.value === 'error'"
                   :agent-name="agent?.name || 'AI 助手'"
                 />
+
+                <!-- 轮次状态（DSH TurnStatus：流式超过 15s 显示深入思考提示 + 计时） -->
+                <div
+                  v-if="stream.streaming.value && turnElapsedMs >= 15000"
+                  class="flex items-center gap-1.5 pl-11 text-xs text-muted/70"
+                >
+                  <AppIcon
+                    name="clock"
+                    :size="11"
+                    class="od-breathe"
+                  />
+                  正在深入思考… {{ formatMmSs(turnElapsedMs) }}
+                </div>
+
+                <!-- 轮次页脚（DSH TurnTail：仅刚结束那轮展示，下次发送清空；
+                     tok·s 按 totalTokens 计算（含输入 token），是近似值） -->
+                <div
+                  v-if="lastTurnMetrics && !stream.streaming.value"
+                  class="pl-11 text-[11px] text-muted/60 tabular-nums"
+                >
+                  耗时 {{ (lastTurnMetrics.elapsedMs / 1000).toFixed(1) }}s
+                  <template v-if="lastTurnMetrics.ttftMs != null">
+                    · 首 token {{ (lastTurnMetrics.ttftMs / 1000).toFixed(1) }}s
+                  </template>
+                  <template v-if="lastTurnMetrics.totalTokens != null && lastTurnMetrics.elapsedMs > 0">
+                    · {{ (lastTurnMetrics.totalTokens / (lastTurnMetrics.elapsedMs / 1000)).toFixed(1) }} tok·s
+                  </template>
+                </div>
 
                 <!-- 错误与重试 -->
                 <div
@@ -446,41 +635,60 @@ onBeforeUnmount(() => stream.abort())
             >
               {{ sendError }}
             </p>
-            <div class="bg-surface border border-border rounded-2xl shadow-card transition-colors focus-within:border-accent-strong">
-              <textarea
-                ref="inputEl"
-                v-model="input"
-                rows="1"
-                class="w-full bg-transparent resize-none outline-none px-4 pt-3.5 text-sm text-fg placeholder:text-muted/70 max-h-[180px]"
-                :placeholder="agentDisabled ? '该 Agent 已停用，无法发送' : '输入消息…（Enter 发送，Shift+Enter 换行）'"
-                :disabled="stream.streaming.value || agentDisabled || (!activeConvId && !isDraft)"
-                @keydown.enter.exact="onEnterKey"
+            <!-- 排队消息条（流式中继续发送的消息在此等待自动续发） -->
+            <MessageQueueStrip
+              :messages="queuedMessages"
+              @remove="removeQueued"
+              @edit="editQueued"
+            />
+            <div class="relative">
+              <!-- 斜杠命令菜单（输入 / 开头时弹出） -->
+              <SlashCommandMenu
+                v-if="slashMenuOpen"
+                :commands="slashCommands"
+                :query="input"
+                :active-index="slashActiveIndex"
+                @select="runSlashCommand"
               />
-              <div class="flex items-center px-3 pb-3 pt-1.5">
-                <!-- 流式中：停止按钮 -->
-                <button
-                  v-if="stream.streaming.value"
-                  class="ml-auto w-[34px] h-[34px] rounded-full bg-danger text-white grid place-items-center transition hover:opacity-90"
-                  title="停止生成"
-                  @click="stopStreaming"
-                >
-                  <AppIcon
-                    name="square"
-                    :size="13"
-                  />
-                </button>
-                <button
-                  v-else
-                  class="ml-auto w-[34px] h-[34px] rounded-full bg-accent text-white grid place-items-center transition hover:-translate-y-px disabled:opacity-45 disabled:pointer-events-none"
-                  title="发送"
-                  :disabled="!input.trim() || agentDisabled || (!activeConvId && !isDraft)"
-                  @click="sendMessage"
-                >
-                  <AppIcon
-                    name="send"
-                    :size="15"
-                  />
-                </button>
+              <div class="bg-surface border border-border rounded-2xl shadow-card transition-colors focus-within:border-accent-strong">
+                <textarea
+                  ref="inputEl"
+                  v-model="input"
+                  rows="1"
+                  class="w-full bg-transparent resize-none outline-none px-4 pt-3.5 text-sm text-fg placeholder:text-muted/70 max-h-[180px]"
+                  :placeholder="agentDisabled ? '该 Agent 已停用，无法发送' : '输入消息…（Enter 发送，Shift+Enter 换行，/ 命令）'"
+                  :disabled="agentDisabled || (!activeConvId && !isDraft)"
+                  @keydown.enter.exact="onEnterKey"
+                  @keydown.up="onSlashNav"
+                  @keydown.down="onSlashNav"
+                  @keydown.escape="onSlashEsc"
+                />
+                <div class="flex items-center px-3 pb-3 pt-1.5">
+                  <!-- 流式中：停止按钮 -->
+                  <button
+                    v-if="stream.streaming.value"
+                    class="ml-auto w-[34px] h-[34px] rounded-full bg-danger text-white grid place-items-center transition hover:opacity-90"
+                    title="停止生成"
+                    @click="stopStreaming"
+                  >
+                    <AppIcon
+                      name="square"
+                      :size="13"
+                    />
+                  </button>
+                  <button
+                    v-else
+                    class="ml-auto w-[34px] h-[34px] rounded-full bg-accent text-white grid place-items-center transition hover:-translate-y-px disabled:opacity-45 disabled:pointer-events-none"
+                    title="发送"
+                    :disabled="!input.trim() || agentDisabled || (!activeConvId && !isDraft)"
+                    @click="sendMessage"
+                  >
+                    <AppIcon
+                      name="send"
+                      :size="15"
+                    />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

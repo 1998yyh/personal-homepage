@@ -312,6 +312,22 @@
   /* 流式输出 I-beam 光标（打字机闪烁） */
   @keyframes od-blink { 0%, 45% { opacity: 1; } 50%, 100% { opacity: 0; } }
   .stream-cursor { display: inline-block; width: 2px; height: 1.05em; margin-left: 2px; vertical-align: text-bottom; background: var(--accent); border-radius: 1px; animation: od-blink 1s step-end infinite; }
+  /* 思考过程 running 态扫光（DSH ReasoningRow 式 shimmer，background-clip: text） */
+  @keyframes od-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .reasoning-shimmer {
+    background: linear-gradient(90deg, var(--muted) 40%, var(--fg) 50%, var(--muted) 60%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: od-shimmer 1.6s linear infinite;
+  }
+  /* 后台任务运行中呼吸点（头部 pill） */
+  @keyframes od-breathe { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.82); } }
+  .od-breathe { animation: od-breathe 1.6s ease-in-out infinite; }
+  /* 工具卡片调用中转圈（loader-circle 图标） */
+  @keyframes od-spin { to { transform: rotate(360deg); } }
+  .od-spin { animation: od-spin .9s linear infinite; }
 
   @media (max-width: 920px) {
     .auth-stage { padding: 16px; align-items: flex-start; }
@@ -405,7 +421,6 @@
 .markdown-content .code-block-copy.copied { color: var(--success); }
 .markdown-content .code-block pre { margin: 0; border: 0; border-radius: 0; background: transparent; padding: 0.875rem 1rem; }
 .markdown-content .code-block pre code { font-size: 0.75rem; line-height: 1.7; }
-.markdown-content .code-block:last-child { margin-bottom: 0; }
 .markdown-content blockquote { border-left: 2px solid color-mix(in oklch, var(--accent) 35%, transparent); padding: 0.5rem 0 0.5rem 1rem; margin: 1rem 0; background: color-mix(in oklch, var(--fg) 3%, transparent); border-radius: 0 0.5rem 0.5rem 0; color: var(--muted); }
 
 /* Markdown 表格 */
@@ -442,6 +457,12 @@
 .markdown-content.chat-md li { background: none; border: none; border-radius: 0; padding: 0; }
 .markdown-content.chat-md li:hover { background: none; }
 
+/* 流式块级渲染的 wrapper（MarkdownBlock）：块间距统一由 wrapper 承担，
+   块内末元素自带下边距清零，避免与 wrapper 间距叠加 */
+.markdown-content.chat-md .md-block { margin-bottom: 0.75rem; }
+.markdown-content.chat-md .md-block:last-child { margin-bottom: 0; }
+.markdown-content.chat-md .md-block > :last-child { margin-bottom: 0; }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -464,6 +485,8 @@
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .ticker-track { animation: none; }
-  .anim-rise, .anim-shake, .thinking-dot, .stream-cursor, .od-drawer, .od-drawer-overlay, .od-modal-overlay { animation: none; }
+  .anim-rise, .anim-shake, .thinking-dot, .stream-cursor, .reasoning-shimmer, .od-breathe, .od-spin, .od-drawer, .od-drawer-overlay, .od-modal-overlay { animation: none; }
+  /* shimmer 关动画后渐变定格会让文字半透明显脏：回退为纯 muted 色 */
+  .reasoning-shimmer { color: var(--muted); background: none; }
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }

@@ -2,6 +2,7 @@ import api from './api';
 import type {
   Agent,
   AgentPayload,
+  BackgroundTask,
   ChatMessage,
   Conversation,
   PagedResponse,
@@ -85,6 +86,14 @@ export const agentsApi = {
     const { data } = await api.get<PagedResponse<ChatMessage>>(`/conversations/${conversationId}/messages`, {
       params: { page, limit: MESSAGES_LIMIT },
     });
+    return data;
+  },
+
+  /** 会话的后台任务列表（最新在前，头部 pill 轮询用） */
+  listBackgroundTasks: async (conversationId: string) => {
+    const { data } = await api.get<BackgroundTask[]>(
+      `/conversations/${conversationId}/background-tasks`,
+    );
     return data;
   },
 };
