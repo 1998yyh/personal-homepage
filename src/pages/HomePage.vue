@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Navbar from '../components/Navbar.vue'
 import AppIcon from '../components/AppIcon.vue'
+import WatchlistCard from '../components/WatchlistCard.vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -113,6 +114,11 @@ const tickerWords = ['终身学习', 'AI 应用', '价值投资', '复盘纪律'
         </span>
         <span class="text-[13.5px] text-muted">{{ gate.desc }}</span>
       </router-link>
+    </div>
+
+    <!-- 观察池 -->
+    <div class="max-w-[1080px] mx-auto px-6 pb-16">
+      <WatchlistCard />
     </div>
 
     <!-- 常用工具 -->

@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import stockSignalsApi from '../../lib/stock-signals-api'
+import stockWatchlistApi from '../../lib/stock-watchlist-api'
 import type { BSignalItem, ScanRun, SignalDateEntry } from '../../types/stock-signal'
 import { useAuthStore } from '../../stores/auth'
+import { showToast } from '../../composables/useToast'
 import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import WatchlistPanel from './components/WatchlistPanel.vue'
 
+const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
@@ -38,6 +43,12 @@ const snapToTradingDay = (date: string) => {
   return d.toISOString().slice(0, 10)
 }
 
+// ---- 页面 Tab：B 信号筛选 / 我的观察池（?tab=pool 直达，切换同步回 URL）----
+const tab = ref<'scan' | 'pool'>(route.query.tab === 'pool' ? 'pool' : 'scan')
+watch(tab, (v) => {
+  void router.replace({ query: v === 'pool' ? { tab: 'pool' } : {} })
+})
+
 // ---- 查询条件 ----
 const queryDate = ref(snapToTradingDay(today))
 const mode = ref<'full' | 'codes'>('full')
@@ -62,6 +73,63 @@ let requestSeq = 0
 
 // ---- 历史日期 ----
 const dates = ref<SignalDateEntry[]>([])
+
+// ---- 观察池（登录用户私有；服务端状态走 vue-query，与 WatchlistPanel 共享缓存）----
+const queryClient = useQueryClient()
+const { data: watchlist } = useQuery({
+  queryKey: ['stock-watchlist'],
+  queryFn: () => stockWatchlistApi.list(),
+  enabled: computed(() => auth.isAuthenticated),
+})
+const triggeredCount = computed(
+  () => (watchlist.value ?? []).filter((i) => i.status === 'triggered').length,
+)
+const poolCodes = computed(() => new Set((watchlist.value ?? []).map((i) => i.code)))
+
+// ---- B 结果勾选入池 ----
+const checked = ref<string[]>([])
+const checkable = computed(() => items.value.filter((i) => !poolCodes.value.has(i.code)))
+const allChecked = computed(
+  () => checkable.value.length > 0 && checked.value.length === checkable.value.length,
+)
+const toggleCheck = (code: string) => {
+  checked.value = checked.value.includes(code)
+    ? checked.value.filter((c) => c !== code)
+    : [...checked.value, code]
+}
+const toggleAll = () => {
+  checked.value = allChecked.value ? [] : checkable.value.map((i) => i.code)
+}
+// 换日期/换结果后勾选作废，防止把 A 日期的勾选带进 B 日期入池
+watch(items, () => {
+  checked.value = []
+})
+
+const addMutation = useMutation({
+  mutationFn: () =>
+    stockWatchlistApi.add(
+      items.value
+        .filter((i) => checked.value.includes(i.code))
+        .map((i) => ({
+          code: i.code,
+          market: i.market,
+          name: i.name,
+          entrySignalDate: queryDate.value,
+        })),
+    ),
+  onSuccess: (res) => {
+    checked.value = []
+    // 响应即入池后的完整池子，直接写缓存省一次往返
+    queryClient.setQueryData(['stock-watchlist'], res.items)
+    const notes: string[] = []
+    if (res.added.length) notes.push(`入池 ${res.added.length} 只`)
+    if (res.duplicated.length) notes.push(`${res.duplicated.length} 只已在池被跳过`)
+    if (res.invalid.length) notes.push(`${res.invalid.length} 只代码无效`)
+    if (res.overflow.length) notes.push(`超 100 上限，${res.overflow.length} 只未入池`)
+    showToast(notes.join('；') || '没有可入池的股票', res.added.length ? 'success' : 'error')
+  },
+  onError: () => showToast('入池失败，请稍后重试', 'error'),
+})
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleString('zh-CN', { hour12: false })
@@ -288,7 +356,7 @@ onBeforeUnmount(clearPoll)
           今日 B 信号筛选
         </h1>
         <p class="text-muted max-w-[60ch]">
-          扫描沪深主板非 ST 股票的新浪多空信号，当日值为 1 即标为 B。结果服务端缓存，历史每日保留。
+          扫描沪深主板非 ST 股票的新浪多空信号，当日值为 1 即标为 B。勾选入池后每日自动盯 S，出 S 标红提醒。
         </p>
       </div>
 
@@ -404,152 +472,226 @@ onBeforeUnmount(clearPoll)
         </p>
       </section>
 
-      <!-- 结果区 -->
-      <section class="mb-7">
-        <div class="flex items-baseline justify-between gap-4 mb-3">
-          <h2 class="font-display text-lg font-bold text-fg">
-            筛选结果
-          </h2>
-          <div class="flex items-center gap-3">
-            <button
-              v-if="items.length"
-              class="od-btn od-btn-ghost !py-1.5 !px-3 text-xs"
-              @click="copyAll"
-            >
-              {{ copied ? `已复制 ${items.length} 只 ✓` : '复制全部代码' }}
-            </button>
-            <span class="text-muted text-sm">
-              <template v-if="scanning">扫描中…</template>
-              <template v-else-if="stats">
-                {{ queryDate }} B：{{ stats.found }} 只 / 已检查 {{ stats.checked }} 只
-              </template>
-              <template v-else-if="loading">读取中…</template>
-              <template v-else>尚未查询</template>
-            </span>
-          </div>
-        </div>
-
-        <!-- 缓存标注 -->
-        <p
-          v-if="stats && !scanning"
-          class="text-muted text-xs mb-3"
+      <!-- Tab 栏：B 信号筛选 / 我的观察池 -->
+      <div class="flex gap-1 mb-5 border-b border-border">
+        <button
+          class="px-4 py-2.5 text-sm font-medium border-b-2 -mb-px cursor-pointer"
+          :class="tab === 'scan' ? 'border-accent text-accent-strong' : 'border-transparent text-muted hover:text-fg'"
+          @click="tab = 'scan'"
         >
-          缓存于 {{ formatTime(stats.scannedAt) }}（非强制刷新不重抓）
-        </p>
-
-        <!-- 警告 -->
-        <div
-          v-if="warnings.length"
-          class="od-card p-3.5 mb-3 text-muted text-sm flex flex-col gap-1"
+          B 信号筛选
+        </button>
+        <button
+          class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px cursor-pointer"
+          :class="tab === 'pool' ? 'border-accent text-accent-strong' : 'border-transparent text-muted hover:text-fg'"
+          @click="tab = 'pool'"
         >
-          <p
-            v-for="(w, i) in warnings"
-            :key="i"
-          >
-            {{ w }}
-          </p>
-        </div>
+          我的观察池
+          <span
+            v-if="triggeredCount"
+            class="min-w-5 h-5 px-1 rounded-full bg-danger text-white text-xs font-bold inline-flex items-center justify-center"
+          >{{ triggeredCount }}</span>
+        </button>
+      </div>
 
-        <!-- 错误 -->
-        <p
-          v-if="error"
-          class="od-error mb-3"
-        >
-          {{ error }}
-        </p>
+      <!-- 出 S 横幅：挂在 B 筛选 Tab，点击跳观察池 -->
+      <button
+        v-if="tab === 'scan' && triggeredCount"
+        class="w-full od-card p-3.5 mb-4 text-sm font-medium text-danger cursor-pointer text-left"
+        @click="tab = 'pool'"
+      >
+        观察池有 {{ triggeredCount }} 只出 S，去查看 →
+      </button>
 
-        <!-- 尚未扫描 -->
-        <div
-          v-if="notScanned && !scanning"
-          class="od-card p-6 text-center"
-        >
-          <p class="text-fg font-medium mb-1.5">
-            {{ queryDate }} 还没有扫描数据
-          </p>
-          <p class="text-muted text-sm mb-5">
-            {{ auth.isAuthenticated ? '点击上方按钮发起扫描，结果会缓存并保留历史' : '登录后可发起扫描；已扫描的日期可直接查看' }}
-          </p>
-          <button
-            v-if="auth.isAuthenticated"
-            class="od-btn od-btn-primary mx-auto"
-            :disabled="loading"
-            @click="scan(false)"
-          >
-            立即扫描
-          </button>
-        </div>
+      <!-- 观察池 Tab -->
+      <WatchlistPanel v-if="tab === 'pool'" />
 
-        <!-- 结果表格 -->
-        <div
-          v-else-if="items.length"
-          class="od-card overflow-x-auto p-0"
-        >
-          <table class="w-full border-collapse text-left">
-            <thead>
-              <tr class="border-b border-border">
-                <th class="text-muted text-xs font-medium px-4 py-3">
-                  股票代码
-                </th>
-                <th class="text-muted text-xs font-medium px-4 py-3">
-                  股票名称
-                </th>
-                <th class="text-muted text-xs font-medium px-4 py-3">
-                  信号日期
-                </th>
-                <th class="text-muted text-xs font-medium px-4 py-3">
-                  信号
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="item in items"
-                :key="item.code"
-                class="border-b border-border last:border-0"
+      <!-- B 信号筛选 Tab -->
+      <template v-else>
+        <!-- 结果区 -->
+        <section class="mb-7">
+          <div class="flex items-baseline justify-between gap-4 mb-3">
+            <h2 class="font-display text-lg font-bold text-fg">
+              筛选结果
+            </h2>
+            <div class="flex items-center gap-3">
+              <button
+                v-if="auth.isAuthenticated && items.length"
+                class="od-btn od-btn-primary !py-1.5 !px-3 text-xs"
+                :disabled="!checked.length || addMutation.isPending.value"
+                @click="addMutation.mutate()"
               >
-                <td class="px-4 py-3 font-mono text-sm text-fg">
-                  {{ item.market.toUpperCase() }}{{ item.code }}
-                </td>
-                <td class="px-4 py-3 text-sm text-fg">
-                  {{ item.name || '—' }}
-                </td>
-                <td class="px-4 py-3 font-mono text-sm text-muted">
-                  {{ queryDate }}
-                </td>
-                <td class="px-4 py-3 text-sm font-bold text-success">
-                  B (1)
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                {{ addMutation.isPending.value ? '入池中…' : `加入观察池${checked.length ? ` (${checked.length})` : ''}` }}
+              </button>
+              <button
+                v-if="items.length"
+                class="od-btn od-btn-ghost !py-1.5 !px-3 text-xs"
+                @click="copyAll"
+              >
+                {{ copied ? `已复制 ${items.length} 只 ✓` : '复制全部代码' }}
+              </button>
+              <span class="text-muted text-sm">
+                <template v-if="scanning">扫描中…</template>
+                <template v-else-if="stats">
+                  {{ queryDate }} B：{{ stats.found }} 只 / 已检查 {{ stats.checked }} 只
+                </template>
+                <template v-else-if="loading">读取中…</template>
+                <template v-else>尚未查询</template>
+              </span>
+            </div>
+          </div>
 
-        <!-- 空结果 -->
-        <div
-          v-else-if="stats && !scanning"
-          class="od-card p-6 text-center text-muted text-sm"
-        >
-          本次查询的股票中，{{ queryDate }} 没有出现 B（1）信号。
-        </div>
-      </section>
-
-      <!-- 历史日期 -->
-      <section v-if="dates.length">
-        <h2 class="font-display text-lg font-bold text-fg mb-3">
-          历史扫描
-        </h2>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="d in dates"
-            :key="d.date"
-            class="od-chip cursor-pointer"
-            :class="{ '!bg-accent !text-white': d.date === queryDate }"
-            @click="selectDate(d.date)"
+          <!-- 缓存标注 -->
+          <p
+            v-if="stats && !scanning"
+            class="text-muted text-xs mb-3"
           >
-            {{ d.date }} · B {{ d.found }}
-          </button>
-        </div>
-      </section>
+            缓存于 {{ formatTime(stats.scannedAt) }}（非强制刷新不重抓）
+          </p>
+
+          <!-- 警告 -->
+          <div
+            v-if="warnings.length"
+            class="od-card p-3.5 mb-3 text-muted text-sm flex flex-col gap-1"
+          >
+            <p
+              v-for="(w, i) in warnings"
+              :key="i"
+            >
+              {{ w }}
+            </p>
+          </div>
+
+          <!-- 错误 -->
+          <p
+            v-if="error"
+            class="od-error mb-3"
+          >
+            {{ error }}
+          </p>
+
+          <!-- 尚未扫描 -->
+          <div
+            v-if="notScanned && !scanning"
+            class="od-card p-6 text-center"
+          >
+            <p class="text-fg font-medium mb-1.5">
+              {{ queryDate }} 还没有扫描数据
+            </p>
+            <p class="text-muted text-sm mb-5">
+              {{ auth.isAuthenticated ? '点击上方按钮发起扫描，结果会缓存并保留历史' : '登录后可发起扫描；已扫描的日期可直接查看' }}
+            </p>
+            <button
+              v-if="auth.isAuthenticated"
+              class="od-btn od-btn-primary mx-auto"
+              :disabled="loading"
+              @click="scan(false)"
+            >
+              立即扫描
+            </button>
+          </div>
+
+          <!-- 结果表格 -->
+          <div
+            v-else-if="items.length"
+            class="od-card overflow-x-auto p-0"
+          >
+            <table class="w-full border-collapse text-left">
+              <thead>
+                <tr class="border-b border-border">
+                  <th
+                    v-if="auth.isAuthenticated"
+                    class="w-10 px-4 py-3"
+                  >
+                    <input
+                      type="checkbox"
+                      class="accent-[var(--accent)] cursor-pointer"
+                      :checked="allChecked"
+                      :disabled="!checkable.length"
+                      title="全选未入池"
+                      @change="toggleAll"
+                    >
+                  </th>
+                  <th class="text-muted text-xs font-medium px-4 py-3">
+                    股票代码
+                  </th>
+                  <th class="text-muted text-xs font-medium px-4 py-3">
+                    股票名称
+                  </th>
+                  <th class="text-muted text-xs font-medium px-4 py-3">
+                    信号日期
+                  </th>
+                  <th class="text-muted text-xs font-medium px-4 py-3">
+                    信号
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="item in items"
+                  :key="item.code"
+                  class="border-b border-border last:border-0"
+                >
+                  <td
+                    v-if="auth.isAuthenticated"
+                    class="px-4 py-3"
+                  >
+                    <input
+                      v-if="!poolCodes.has(item.code)"
+                      type="checkbox"
+                      class="accent-[var(--accent)] cursor-pointer"
+                      :checked="checked.includes(item.code)"
+                      @change="toggleCheck(item.code)"
+                    >
+                    <span
+                      v-else
+                      class="text-muted text-xs"
+                    >已在池</span>
+                  </td>
+                  <td class="px-4 py-3 font-mono text-sm text-fg">
+                    {{ item.market.toUpperCase() }}{{ item.code }}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-fg">
+                    {{ item.name || '—' }}
+                  </td>
+                  <td class="px-4 py-3 font-mono text-sm text-muted">
+                    {{ queryDate }}
+                  </td>
+                  <td class="px-4 py-3 text-sm font-bold text-success">
+                    B (1)
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 空结果 -->
+          <div
+            v-else-if="stats && !scanning"
+            class="od-card p-6 text-center text-muted text-sm"
+          >
+            本次查询的股票中，{{ queryDate }} 没有出现 B（1）信号。
+          </div>
+        </section>
+
+        <!-- 历史日期 -->
+        <section v-if="dates.length">
+          <h2 class="font-display text-lg font-bold text-fg mb-3">
+            历史扫描
+          </h2>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="d in dates"
+              :key="d.date"
+              class="od-chip cursor-pointer"
+              :class="{ '!bg-accent !text-white': d.date === queryDate }"
+              @click="selectDate(d.date)"
+            >
+              {{ d.date }} · B {{ d.found }}
+            </button>
+          </div>
+        </section>
+      </template>
 
       <footer class="mt-8 text-muted text-xs">
         股票清单与信号数据均来自新浪财经，结果由服务端缓存并按日保留。仅按信号值展示，不构成投资建议。
