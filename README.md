@@ -29,7 +29,8 @@ cp .env.example .env
 ### 3. 启动开发服务器
 
 ```bash
-pnpm dev
+pnpm dev          # 连本地后端（.env 里的 VITE_API_URL，默认 localhost:3000）
+pnpm dev:online   # 直连线上后端：加载 .env.online，由 Vite 代理 /api 与 /uploads 到线上，规避 CORS
 ```
 
 访问 http://localhost:5173
