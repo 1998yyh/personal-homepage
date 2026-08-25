@@ -136,6 +136,9 @@ const cardStyle = computed(() => {
 });
 
 const contentType = computed(() => {
+  // config 节点不走全屏 loading/error 状态层：由 NodeConfigContent 内联展示状态，
+  // 保留「配置/生成」入口——否则校验失败（如未选模型）后节点锁死，配置抽屉都打不开
+  if (props.node.type === CanvasNodeType.Config) return 'config';
   if (props.node.metadata?.status === 'loading') return 'loading';
   if (props.node.metadata?.status === 'error') return 'error';
   switch (props.node.type) {

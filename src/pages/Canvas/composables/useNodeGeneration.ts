@@ -7,6 +7,7 @@
 import { ref } from 'vue';
 import { useCanvasStore } from '../../../stores/canvas';
 import { generationApi } from '../../../lib/generation-api';
+import { showToast } from '../../../composables/useToast';
 import { fitNodeSize } from '../../../lib/canvas/canvas-node-size';
 import {
   audioMetadata,
@@ -145,12 +146,13 @@ export function useNodeGeneration() {
     const meta = configNode.metadata || {};
     const mode = meta.generationMode || 'image';
     const { prompt, referenceMediaIds } = collectInputs(configNode);
+    // 校验失败走全局 toast，不写节点 metadata（status: 'error' 会把节点 UI 锁死在错误态）
     if (!meta.model) {
-      store.updateNodeMetadata(configNodeId, { status: 'error', errorDetails: '请先在配置中选择模型' });
+      showToast('请先在配置中选择模型');
       return;
     }
     if (!prompt) {
-      store.updateNodeMetadata(configNodeId, { status: 'error', errorDetails: '请先填写提示词' });
+      showToast('请先填写提示词');
       return;
     }
 
@@ -162,7 +164,9 @@ export function useNodeGeneration() {
       else await runImage(configNode, prompt, referenceMediaIds);
       store.updateNodeMetadata(configNodeId, { status: 'success' });
     } catch (error) {
-      store.updateNodeMetadata(configNodeId, { status: 'error', errorDetails: errorMessage(error) });
+      // 生成失败：status 还原（loading → idle），错误走全局 toast，不糊在节点上
+      store.updateNodeMetadata(configNodeId, { status: 'idle' });
+      showToast(errorMessage(error));
     } finally {
       generating.value = false;
     }

@@ -112,14 +112,7 @@ function handleGenerate() {
       {{ modelLabel }}
     </div>
     <div
-      v-if="meta.status === 'error' && meta.errorDetails"
-      class="max-w-full truncate text-xs text-danger"
-      :title="meta.errorDetails"
-    >
-      {{ meta.errorDetails }}
-    </div>
-    <div
-      v-else-if="referenceCount"
+      v-if="referenceCount"
       class="text-xs text-muted"
     >
       {{ referenceCount }} 个参考素材
@@ -433,13 +426,6 @@ function handleGenerate() {
           <p class="text-muted text-xs">
             参考素材：把图片/视频/音频节点连到本节点即自动作为参考（当前 {{ referenceCount }} 个）。
             视频为异步任务，生成期间可继续编辑画布。
-          </p>
-
-          <p
-            v-if="meta.status === 'error' && meta.errorDetails"
-            class="od-error"
-          >
-            {{ meta.errorDetails }}
           </p>
         </div>
 

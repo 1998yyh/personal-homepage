@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { canvasApi } from '../../lib/canvas-api';
 import type { CanvasProjectSummary } from '../../types/canvas-api';
 import { useAuthStore } from '../../stores/auth';
+import { showToast } from '../../composables/useToast';
 import Navbar from '../../components/Navbar.vue';
 import EmptyState from '../../components/EmptyState.vue';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal.vue';
@@ -42,7 +43,8 @@ async function handleCreate() {
     const project = await canvasApi.create(`画布 ${new Date().toLocaleDateString('zh-CN')}`);
     router.push(`/canvas/${project.id}`);
   } catch {
-    // 创建失败：保持列表页，静默（后续可在此补充 toast 提示）
+    // 创建失败：保持列表页，toast 提示
+    showToast('创建画布失败，请稍后重试');
   } finally {
     creating.value = false;
   }
