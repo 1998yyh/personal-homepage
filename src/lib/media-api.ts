@@ -20,7 +20,19 @@ export const mediaApi = {
 };
 
 // 后端 /uploads 静态目录在 /api 前缀之外，相对路径需补 API origin
-const apiOrigin = new URL(api.defaults.baseURL || 'http://43.140.214.49:3000/api').origin;
+// 带 base 解析 + 兜底：baseURL 是相对路径（/api 同域反代部署）或非法值时
+// 不能在这里炸掉——本行在模块顶层执行，一炸会连累所有 import 本模块的页面加载
+function resolveApiOrigin(): string {
+  const base = api.defaults.baseURL || 'http://43.140.214.49:3000/api';
+  try {
+    return new URL(base, window.location.origin).origin;
+  } catch {
+    console.warn(`[media-api] VITE_API_URL「${base}」不是合法 URL，媒体地址将回退当前站点源`);
+    return window.location.origin;
+  }
+}
+
+const apiOrigin = resolveApiOrigin();
 
 export function mediaUrl(url: string) {
   if (!url) return url;
