@@ -28,7 +28,7 @@ pnpm preview   # 本地预览生产构建
 src/
 ├── lib/            # 框架无关层：api.ts（axios 实例+拦截器）、daily-report-api.ts、markdown.ts、
 │                   #   canvas-api/generation-api/channels-api/prompts-api/assets-api/media-api、
-│                   #   agents-api/mcp-servers-api/skills-api/stock-signals-api、
+│                   #   agents-api/mcp-servers-api/skills-api/stock-signals-api/stock-watchlist-api、
 │                   #   zip.ts（fflate）+ assets-export.ts、canvas/（画布纯函数层）
 ├── types/          # 共享 TypeScript 类型（canvas.ts 为画布文档类型，AGPL 移植）
 ├── stores/         # Pinia：auth.ts、canvas.ts（画布文档态唯一权威：乐观锁/撤销重做/版本轮询）
@@ -44,7 +44,8 @@ src/
     ├── Channels/       # AI 渠道管理（卡片 + 抽屉表单，apiKey 只写不读）
     ├── Prompts/        # 提示词库（左源管理 + 右卡片/搜索/分页）
     ├── Assets/         # 素材库（kind Tab + 搜索 + ZIP 导入导出）
-    ├── StockSignals/   # B 信号筛选（次级页，不进 Navbar；入口在 StockReportsPage；扫描需登录、结果公开）
+    ├── StockSignals/   # B 信号筛选 + 观察池双 Tab（次级页，不进 Navbar；入口在 StockReportsPage；扫描需登录、
+    │                   #   结果公开；观察池登录私有：勾选入池盯 S，出 S 标红，?tab=pool 直达，WatchlistPanel 在 components/）
     ├── McpServers/     # MCP Server 管理（次级页；入口在 AgentsPage；列表仅返回启用中，env/headers 只写）
     ├── Skills/         # Skill 管理（次级页；入口在 AgentsPage；列表仅返回启用中）
     └── Agents/
@@ -71,7 +72,7 @@ src/
 ## 后端连接
 
 - 所有请求发往 `import.meta.env.VITE_API_URL`（见 `.env.example`），缺省回退到硬编码生产地址 `http://43.140.214.49:3000/api`（`src/lib/api.ts:3`）。
-- 后端端点：`/api/auth/*`（注册/登录/刷新/资料）、`/api/daily-reports/*`、`/api/agents/*`（CRUD）与 `/api/conversations/*`（会话/消息/流式）、`/api/canvas-projects/*`（文档 PUT 带 baseVersion 乐观锁 + `/version` 轻量比对）、`/api/ai-generation/*`（images 同步 / videos+tasks 异步轮询）、`/api/ai-channels/*`、`/api/prompts/*`（含 sources 子资源与 refresh）、`/api/assets/*`、`/api/media/*`（上传/查询；文件本体在 `/uploads/`，不在 `/api` 前缀下）、`/api/stock-signals/*`（POST scans 需登录，结果与日期公开）、`/api/mcp-servers/*`、`/api/skills/*`。
+- 后端端点：`/api/auth/*`（注册/登录/刷新/资料）、`/api/daily-reports/*`、`/api/agents/*`（CRUD）与 `/api/conversations/*`（会话/消息/流式）、`/api/canvas-projects/*`（文档 PUT 带 baseVersion 乐观锁 + `/version` 轻量比对）、`/api/ai-generation/*`（images 同步 / videos+tasks 异步轮询）、`/api/ai-channels/*`、`/api/prompts/*`（含 sources 子资源与 refresh）、`/api/assets/*`、`/api/media/*`（上传/查询；文件本体在 `/uploads/`，不在 `/api` 前缀下）、`/api/stock-signals/*`（POST scans 需登录，结果与日期公开）、`/api/stock-watchlist/*`（全需登录；GET 列表 `{items}` 包裹、POST 批量入池返回 `{added,invalid,duplicated,overflow,items}` 四类均为代码数组、DELETE 移除、POST check 手动检查）、`/api/mcp-servers/*`、`/api/skills/*`。
 - Agents API 分页常量（`src/lib/agents-api.ts`）：`AGENTS_LIMIT=100`（一次拉全）、`CONVERSATIONS_LIMIT=20`（滚动加载）、`MESSAGES_LIMIT=30`（向上翻页）。删除会话走 `DELETE /conversations/:id`（不在 `/agents/` 下）。后台任务走 `GET /conversations/:id/background-tasks`。
 - 本地开发需后端 CORS 放行 `http://localhost:5173`（2026-07 迁移验收时后端未放行本地源，联调前需先确认）。
 
@@ -266,5 +267,5 @@ userNearBottom = scrollHeight - scrollTop - clientHeight < 80  // 阈值 80px
 3. 涉及鉴权/路由的改动，浏览器手动验证：匿名可直接访问所有页面且 Navbar 显示「登录」；登录 → 回 `redirect` 来源页；退出 → 回 `/login` 且 localStorage 双 token 清空；token 过期 → 自动刷新无感继续（Network 面板可见 `/auth/refresh`）；刷新失败 → 静默登出留在当前页（Navbar 变回「登录」）。
 
 ---
-**版本**: v3.7（DSH 交互移植：思维链行/工具四态/子代理嵌套轨迹/后台任务 pill/排队/斜杠命令/轮次计时 + 两类竞态防线）
-**最后更新**: 2026-08-16
+**版本**: v3.8（股票观察池：B 信号勾选入池盯 S（upbs `'0'`，见 CONTEXT.md 与 docs/adr/0001）、出 S 标红手动剔除、后端交易日 10:00/14:50 cron refresh 重扫 + 首页 WatchlistCard）
+**最后更新**: 2026-08-25
