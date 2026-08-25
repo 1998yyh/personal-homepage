@@ -26,7 +26,28 @@ const FORMAT_LABELS: Record<string, string> = {
   [ApiFormat.OpenAI]: 'OpenAI 兼容',
   [ApiFormat.Ark]: '火山方舟 Ark',
   [ApiFormat.Gemini]: 'Gemini',
+  [ApiFormat.Anthropic]: 'Anthropic',
 }
+
+/** 分组展示顺序，未收录的格式兜底排最后 */
+const FORMAT_ORDER: ApiFormat[] = [ApiFormat.OpenAI, ApiFormat.Gemini, ApiFormat.Ark, ApiFormat.Anthropic]
+
+/** 按接口类型分组（apiFormat 是渠道级唯一类型；capability 是模型级一对多，做分组键会让渠道重复出现） */
+const groupedChannels = computed(() => {
+  const groups = new Map<ApiFormat, AiChannelView[]>()
+  for (const ch of channels.value ?? []) {
+    const list = groups.get(ch.apiFormat)
+    if (list) list.push(ch)
+    else groups.set(ch.apiFormat, [ch])
+  }
+  const order = (f: ApiFormat) => {
+    const i = FORMAT_ORDER.indexOf(f)
+    return i === -1 ? FORMAT_ORDER.length : i
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => order(a) - order(b))
+    .map(([format, items]) => ({ format, items }))
+})
 
 const CAPABILITY_LABELS: Record<string, string> = {
   image: '图片',
@@ -165,87 +186,88 @@ const openDelete = (channel: AiChannelView) => {
           @action="openCreate"
         />
 
-        <div
-          v-else
-          class="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-[18px]"
-        >
-          <article
-            v-for="channel in channels"
-            :key="channel.id"
-            class="od-card p-5 flex flex-col gap-3.5"
+        <div v-else>
+          <section
+            v-for="group in groupedChannels"
+            :key="group.format"
+            class="mb-8 last:mb-0"
           >
-            <div class="flex items-center gap-3">
-              <div class="w-[42px] h-[42px] rounded-xl bg-accent text-white grid place-items-center shrink-0">
-                <AppIcon
-                  name="sliders"
-                  :size="20"
-                />
+            <div class="flex items-baseline gap-2.5 mb-3">
+              <h2 class="font-display text-lg font-bold tracking-[-0.01em] text-fg">
+                {{ FORMAT_LABELS[group.format] ?? group.format }}
+              </h2>
+              <span class="text-muted text-xs">{{ group.items.length }} 个渠道</span>
+            </div>
+
+            <div class="od-card overflow-hidden">
+              <div
+                v-for="channel in group.items"
+                :key="channel.id"
+                class="flex items-center gap-4 px-5 py-4 border-b border-border last:border-b-0 hover:bg-fg/[0.02] transition-colors"
+              >
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2.5">
+                    <h3 class="text-fg font-semibold text-[15px] truncate">
+                      {{ channel.name }}
+                    </h3>
+                    <span
+                      class="px-2 py-0.5 rounded-md text-xs font-medium shrink-0"
+                      :class="channel.isActive ? 'bg-accent-soft text-accent-strong' : 'bg-fg/5 text-muted'"
+                    >
+                      {{ channel.isActive ? '启用' : '停用' }}
+                    </span>
+                  </div>
+                  <p
+                    class="text-muted text-xs font-mono truncate mt-1"
+                    :title="channel.baseUrl"
+                  >
+                    {{ channel.baseUrl }}
+                  </p>
+                </div>
+
+                <div
+                  class="hidden sm:block shrink-0 w-44 text-muted text-xs truncate"
+                  :title="channel.models.map((m) => m.name).join('、')"
+                >
+                  {{ capabilitySummary(channel) }} · {{ channel.models.length }} 个模型
+                </div>
+
+                <div class="flex gap-1.5 shrink-0">
+                  <button
+                    class="od-icon-btn !w-9 !h-9"
+                    :title="channel.isActive ? '停用' : '启用'"
+                    :disabled="toggleMutation.isPending.value"
+                    @click="toggleMutation.mutate(channel)"
+                  >
+                    <AppIcon
+                      :name="channel.isActive ? 'circle-dot' : 'refresh-cw'"
+                      :size="15"
+                    />
+                  </button>
+                  <button
+                    class="od-icon-btn !w-9 !h-9"
+                    title="编辑"
+                    @click="openEdit(channel)"
+                  >
+                    <AppIcon
+                      name="pencil"
+                      :size="15"
+                    />
+                  </button>
+                  <button
+                    class="od-icon-btn !w-9 !h-9 hover:!text-danger hover:!border-danger/40"
+                    title="删除"
+                    @click="openDelete(channel)"
+                  >
+                    <AppIcon
+                      name="trash-2"
+                      :size="15"
+                    />
+                  </button>
+                </div>
               </div>
-              <div class="min-w-0 flex-1">
-                <h3 class="text-fg font-semibold text-[15.5px] truncate">
-                  {{ channel.name }}
-                </h3>
-                <p class="text-muted text-xs truncate mt-0.5">
-                  {{ FORMAT_LABELS[channel.apiFormat] ?? channel.apiFormat }} · {{ capabilitySummary(channel) }}
-                </p>
-              </div>
-              <span
-                class="px-2 py-0.5 rounded-md text-xs font-medium shrink-0"
-                :class="channel.isActive ? 'bg-accent-soft text-accent-strong' : 'bg-fg/5 text-muted'"
-              >
-                {{ channel.isActive ? '启用' : '停用' }}
-              </span>
             </div>
-
-            <div class="text-muted text-xs font-mono truncate">
-              {{ channel.baseUrl }}
-            </div>
-
-            <div class="flex flex-wrap gap-2">
-              <span
-                v-for="model in channel.models"
-                :key="model.name"
-                class="px-2 py-1 rounded-md bg-fg/5 text-muted text-xs"
-              >
-                {{ model.name }}
-                <span class="text-accent-strong">{{ CAPABILITY_LABELS[model.capability] }}</span>
-              </span>
-            </div>
-
-            <div class="flex justify-end gap-2 border-t border-border pt-3 mt-auto">
-              <button
-                class="od-icon-btn !w-9 !h-9"
-                :title="channel.isActive ? '停用' : '启用'"
-                :disabled="toggleMutation.isPending.value"
-                @click="toggleMutation.mutate(channel)"
-              >
-                <AppIcon
-                  :name="channel.isActive ? 'circle-dot' : 'refresh-cw'"
-                  :size="15"
-                />
-              </button>
-              <button
-                class="od-icon-btn !w-9 !h-9"
-                title="编辑"
-                @click="openEdit(channel)"
-              >
-                <AppIcon
-                  name="pencil"
-                  :size="15"
-                />
-              </button>
-              <button
-                class="od-icon-btn !w-9 !h-9 hover:!text-danger hover:!border-danger/40"
-                title="删除"
-                @click="openDelete(channel)"
-              >
-                <AppIcon
-                  name="trash-2"
-                  :size="15"
-                />
-              </button>
-            </div>
-          </article>
+          </section>
         </div>
       </template>
     </main>
