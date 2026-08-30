@@ -1,0 +1,58 @@
+name: deploy
+
+# 前端部署：CI 构建 dist（几 MB，跨境 rsync 没问题）→ 同步到服务器 nginx 根目录。
+# 触发：push 到 main 自动 + 手动。回滚 = 重跑旧 ref 的 workflow。纯文档改动不触发。
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 安装依赖并构建
+        env:
+          # 生产走 nginx 同源反代，必须用 /api 构建
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: 配置 SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: 同步 dist 到服务器
+        run: |
+          rsync -rlptzD --delete --no-owner --no-group \
+            -e "ssh -o BatchMode=yes" \
+            dist/ ${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}:${{ vars.REMOTE_DIR }}/
+
+      - name: 健康检查
+        run: |
+          ssh -o BatchMode=yes ${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }} '
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/ || echo 000)
+            if [ "$code" = "200" ]; then echo "✅ 首页就绪 (HTTP $code)"; else echo "❌ HTTP $code"; exit 1; fi
+          '
