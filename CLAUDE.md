@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **角色**: Vue 3 前端工程师（暗色玻璃态 UI、工具类 SPA）
 - **技术栈**: Vue 3.5（`<script setup lang="ts">`）+ TypeScript 5.9 (strict) + Vite 8 + Pinia 4 + vue-router 5 + @tanstack/vue-query 5 + Tailwind CSS v4 + markdown-it 14 + Axios 1
 - **项目描述**: 「Web Tools」个人主页前端 —— 连接独立后端服务「团子后台」(Web Tools API) 的 SPA，提供 AI/股票日报阅读与前端开发小工具
-- **语言约定**: UI 文案与代码注释均为中文
+- **语言约定**: UI 文案与代码注释均为中文。核心 / 关键逻辑必须写中文注释（见「编码规范」）。
 - **历史**: 2026-07 由 React 19 版原地重写（`vue-migration` 分支），React 原版可从 `feature-kimi3` 分支对照（`git show feature-kimi3:<path>`）
 
 ## 可执行命令
@@ -101,6 +101,7 @@ src/
 从代码中观察到的实际约定：
 
 - **SFC 一律 `<script setup lang="ts">`**；类型导入必须 `import type`（`verbatimModuleSyntax` 开启，混用会编译失败）。
+- **核心 / 关键逻辑必须加中文注释**：状态机、竞态/代际令牌、乐观锁、轮询终态、鉴权刷新、生成占位替换、跨 Tab 会话等「不看注释会踩坑」的路径，用一两句中文写清**为什么**和不变式，不要复述下一行代码在干什么。显而易见的取值 / 绑样式 / 普通 CRUD 不要注。注释语言只能是中文（与「语言约定」一致）。
 - **API 层模式**：`src/lib/` 一个资源一个模块，首行 `import api from './api'`，方法内 `const { data } = await api.get<T>(...)` 后直接返回 `data`（参照 `daily-report-api.ts`）。类型放 `src/types/`。
 - **新增页面**：在 `src/router/index.ts` 注册路由（所有页面公开访问，无需 meta 标记）；**主板块**在 `src/components/Navbar.vue` 的 `navItems` 数组加导航项（含 `activePattern` 正则），**次级页面**（如 StockSignals/McpServers/Skills）不进 Navbar，从父页面用 `<router-link>` 进入；带 Navbar 的页面根元素用 `min-h-screen` 即可（背景色在 body 上，无需装饰元素）。
 - **服务端状态**用 vue-query（`useQuery`），**跨组件状态**用 Pinia store，组件本地状态用 `ref`；不引入其他状态库。
@@ -240,6 +241,7 @@ userNearBottom = scrollHeight - scrollTop - clientHeight < 80  // 阈值 80px
 ### ✅ 必须执行
 - 新增后端请求必须走 `src/lib/api.ts` 的共享 axios 实例（才有 token 注入与 401 刷新）。
 - 类型用 `import type` 导入；改完代码跑 `pnpm build` 验证类型。
+- 写或改核心 / 关键逻辑时必须补中文注释（为什么 + 不变式）；禁止只写英文注释，也禁止给显而易见的代码刷注释。
 - 退出登录入口必须 `logout()` 后显式 `router.push('/login')`（守卫不拦原地状态变化）。
 - 日报类「列表加载后自动选中第一条」场景用带 `immediate: true` 的 watch。
 - **切换会话 / 离开 AgentChatPage 时必须调 `stream.abort()`**（切换：`selectConversation` / `startDraft`；离开：`onBeforeUnmount`）——无条件调用（abort 内部幂等），顺带清停止残影；只有「停止生成」用 `abort({ keepPartial: true })` 保留中断残影。
