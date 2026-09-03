@@ -51,4 +51,9 @@ export const generationApi = {
     const { data } = await api.get<GenerationTaskView>(`/ai-generation/tasks/${id}`)
     return data
   },
+
+  /** 删除任务记录。走 POST …/delete（不用 HTTP DELETE）；只删任务行，不删结果媒体。 */
+  removeTask: async (id: string) => {
+    await api.post(`/ai-generation/tasks/${id}/delete`)
+  },
 }

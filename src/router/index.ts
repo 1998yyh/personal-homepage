@@ -20,8 +20,10 @@ const router = createRouter({
     { path: '/channels', component: () => import('../pages/Channels/ChannelsPage.vue') },
     { path: '/prompts', component: () => import('../pages/Prompts/PromptsPage.vue') },
     { path: '/assets', component: () => import('../pages/Assets/AssetsPage.vue') },
-    // 生成台：全站首条需登录路由（meta.requiresAuth，守卫硬拦，见 docs/adr/0002）
+    // 生成台：全站首条需登录路由（meta.requiresAuth，守卫硬拦，见 docs/adr 0002）
     { path: '/studio', redirect: '/studio/image' },
+    // 必须写在 :tab 前面，否则 history 会被当成 tab 参数。
+    { path: '/studio/history', redirect: '/studio/image' },
     {
       path: '/studio/:tab',
       component: () => import('../pages/Studio/StudioPage.vue'),

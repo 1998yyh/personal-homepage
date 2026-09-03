@@ -16,11 +16,15 @@ import {
 } from 'reka-ui'
 import AppIcon from '../AppIcon.vue'
 
-defineProps<{
-  options: Array<{ value: string; label: string }>
-  placeholder?: string
-  disabled?: boolean
-}>()
+withDefaults(
+  defineProps<{
+    options: Array<{ value: string; label: string }>
+    placeholder?: string
+    disabled?: boolean
+    compact?: boolean
+  }>(),
+  { compact: false, disabled: false, placeholder: undefined },
+)
 
 // modelRef 字符串（modelValue 可空以支持未选态）
 const model = defineModel<string>()
@@ -32,14 +36,22 @@ const model = defineModel<string>()
     :disabled="disabled"
   >
     <SelectTrigger
-      class="od-input flex w-full items-center justify-between gap-2 text-left"
-      :class="{ 'cursor-not-allowed opacity-60': disabled }"
+      class="flex w-full items-center justify-between gap-2 text-left"
+      :class="[
+        compact
+          ? 'h-8 rounded-lg border border-border bg-transparent px-2.5 text-xs text-fg'
+          : 'od-input', // compact 给生成台底栏：避免 od-input 的大内边距把工具条撑高。
+        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+      ]"
     >
-      <SelectValue :placeholder="placeholder ?? '请选择…'" />
+      <SelectValue
+        class="min-w-0 truncate"
+        :placeholder="placeholder ?? '请选择…'"
+      />
       <SelectIcon class="shrink-0 text-muted">
         <AppIcon
           name="chevron-down"
-          :size="16"
+          :size="compact ? 14 : 16"
         />
       </SelectIcon>
     </SelectTrigger>
