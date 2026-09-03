@@ -3,6 +3,7 @@
 > 来源：`.scratch/gen-studio/` wayfinder 地图收敛。
 > 决策底座：[01-charting-consensus](../../.scratch/gen-studio/issues/01-charting-consensus.md)（十一项奠基决策）+ [02-ui-prototype](../../.scratch/gen-studio/issues/02-ui-prototype.md)（变体 A 定稿画面）。
 > 关联 ADR：[0002 登录墙](../adr/0002-studio-login-wall.md)、[0003 shadcn-vue 组件层](../adr/0003-shadcn-vue-component-layer.md)。
+> 交互修订（2026-09-02 / 09-03）：左表单 + 右小卡的第一版骨架被结果优先工作台取代；任务历史页改为各能力台左侧缩略图栏。见 [生成台交互优化方案](./2026-09-02-gen-studio-interaction.md)。本文件仍是能力 / 路由 / API / 登录墙的权威；画面与循环以修订稿为准。
 
 ## 问题陈述
 

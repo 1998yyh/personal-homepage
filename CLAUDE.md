@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **角色**: Vue 3 前端工程师（暗色玻璃态 UI、工具类 SPA）
 - **技术栈**: Vue 3.5（`<script setup lang="ts">`）+ TypeScript 5.9 (strict) + Vite 8 + Pinia 4 + vue-router 5 + @tanstack/vue-query 5 + Tailwind CSS v4 + markdown-it 14 + Axios 1
 - **项目描述**: 「Web Tools」个人主页前端 —— 连接独立后端服务「团子后台」(Web Tools API) 的 SPA，提供 AI/股票日报阅读与前端开发小工具
-- **语言约定**: UI 文案与代码注释均为中文
+- **语言约定**: UI 文案与代码注释均为中文。核心 / 关键逻辑必须写中文注释（见「编码规范」）。
 - **历史**: 2026-07 由 React 19 版原地重写（`vue-migration` 分支），React 原版可从 `feature-kimi3` 分支对照（`git show feature-kimi3:<path>`）
 
 ## 可执行命令
@@ -30,7 +30,7 @@ pnpm preview   # 本地预览生产构建
 src/
 ├── lib/            # 框架无关层：api.ts（axios 实例+拦截器）、daily-report-api.ts、markdown.ts、
 │                   #   canvas-api/generation-api/channels-api/prompts-api/assets-api/media-api、
-│                   #   agents-api/mcp-servers-api/skills-api/stock-signals-api、
+│                   #   agents-api/mcp-servers-api/skills-api/stock-signals-api/stock-watchlist-api、
 │                   #   zip.ts（fflate）+ assets-export.ts、canvas/（画布纯函数层）
 ├── types/          # 共享 TypeScript 类型（canvas.ts 为画布文档类型，AGPL 移植）
 ├── stores/         # Pinia：auth.ts、canvas.ts（画布文档态唯一权威：乐观锁/撤销重做/版本轮询）
@@ -46,7 +46,8 @@ src/
     ├── Channels/       # AI 渠道管理（卡片 + 抽屉表单，apiKey 只写不读）
     ├── Prompts/        # 提示词库（左源管理 + 右卡片/搜索/分页）
     ├── Assets/         # 素材库（kind Tab + 搜索 + ZIP 导入导出）
-    ├── StockSignals/   # B 信号筛选（次级页，不进 Navbar；入口在 StockReportsPage；扫描需登录、结果公开）
+    ├── StockSignals/   # B 信号筛选 + 观察池双 Tab（次级页，不进 Navbar；入口在 StockReportsPage；扫描需登录、
+    │                   #   结果公开；观察池登录私有：勾选入池盯 S，出 S 标红，?tab=pool 直达，WatchlistPanel 在 components/）
     ├── McpServers/     # MCP Server 管理（次级页；入口在 AgentsPage；列表仅返回启用中，env/headers 只写）
     ├── Skills/         # Skill 管理（次级页；入口在 AgentsPage；列表仅返回启用中）
     └── Agents/
@@ -73,7 +74,7 @@ src/
 ## 后端连接
 
 - 所有请求发往 `import.meta.env.VITE_API_URL`（见 `.env.example`），缺省回退到硬编码生产地址 `http://43.140.214.49:3000/api`（`src/lib/api.ts:3`）。
-- 后端端点：`/api/auth/*`（注册/登录/刷新/资料）、`/api/daily-reports/*`、`/api/agents/*`（CRUD）与 `/api/conversations/*`（会话/消息/流式）、`/api/canvas-projects/*`（文档 PUT 带 baseVersion 乐观锁 + `/version` 轻量比对）、`/api/ai-generation/*`（images 同步 / videos+tasks 异步轮询）、`/api/ai-channels/*`、`/api/prompts/*`（含 sources 子资源与 refresh）、`/api/assets/*`、`/api/media/*`（上传/查询；文件本体在 `/uploads/`，不在 `/api` 前缀下）、`/api/stock-signals/*`（POST scans 需登录，结果与日期公开）、`/api/mcp-servers/*`、`/api/skills/*`。
+- 后端端点：`/api/auth/*`（注册/登录/刷新/资料）、`/api/daily-reports/*`、`/api/agents/*`（CRUD）与 `/api/conversations/*`（会话/消息/流式）、`/api/canvas-projects/*`（文档 PUT 带 baseVersion 乐观锁 + `/version` 轻量比对）、`/api/ai-generation/*`（images 同步 / videos+tasks 异步轮询）、`/api/ai-channels/*`、`/api/prompts/*`（含 sources 子资源与 refresh）、`/api/assets/*`、`/api/media/*`（上传/查询；文件本体在 `/uploads/`，不在 `/api` 前缀下）、`/api/stock-signals/*`（POST scans 需登录，结果与日期公开）、`/api/stock-watchlist/*`（全需登录；GET 列表 `{items}` 包裹、POST 批量入池返回 `{added,invalid,duplicated,overflow,items}` 四类均为代码数组、DELETE 移除、POST check 手动检查）、`/api/mcp-servers/*`、`/api/skills/*`。
 - Agents API 分页常量（`src/lib/agents-api.ts`）：`AGENTS_LIMIT=100`（一次拉全）、`CONVERSATIONS_LIMIT=20`（滚动加载）、`MESSAGES_LIMIT=30`（向上翻页）。删除会话走 `DELETE /conversations/:id`（不在 `/agents/` 下）。后台任务走 `GET /conversations/:id/background-tasks`。
 - 本地开发需后端 CORS 放行 `http://localhost:5173`（2026-07 迁移验收时后端未放行本地源，联调前需先确认）。
 
@@ -102,6 +103,7 @@ src/
 从代码中观察到的实际约定：
 
 - **SFC 一律 `<script setup lang="ts">`**；类型导入必须 `import type`（`verbatimModuleSyntax` 开启，混用会编译失败）。
+- **核心 / 关键逻辑必须加中文注释**：状态机、竞态/代际令牌、乐观锁、轮询终态、鉴权刷新、生成占位替换、跨 Tab 会话等「不看注释会踩坑」的路径，用一两句中文写清**为什么**和不变式，不要复述下一行代码在干什么。显而易见的取值 / 绑样式 / 普通 CRUD 不要注。注释语言只能是中文（与「语言约定」一致）。
 - **API 层模式**：`src/lib/` 一个资源一个模块，首行 `import api from './api'`，方法内 `const { data } = await api.get<T>(...)` 后直接返回 `data`（参照 `daily-report-api.ts`）。类型放 `src/types/`。
 - **新增页面**：在 `src/router/index.ts` 注册路由（所有页面公开访问，无需 meta 标记）；**主板块**在 `src/components/Navbar.vue` 的 `navItems` 数组加导航项（含 `activePattern` 正则），**次级页面**（如 StockSignals/McpServers/Skills）不进 Navbar，从父页面用 `<router-link>` 进入；带 Navbar 的页面根元素用 `min-h-screen` 即可（背景色在 body 上，无需装饰元素）。
 - **服务端状态**用 vue-query（`useQuery`），**跨组件状态**用 Pinia store，组件本地状态用 `ref`；不引入其他状态库。
@@ -241,6 +243,7 @@ userNearBottom = scrollHeight - scrollTop - clientHeight < 80  // 阈值 80px
 ### ✅ 必须执行
 - 新增后端请求必须走 `src/lib/api.ts` 的共享 axios 实例（才有 token 注入与 401 刷新）。
 - 类型用 `import type` 导入；改完代码跑 `pnpm build` 验证类型。
+- 写或改核心 / 关键逻辑时必须补中文注释（为什么 + 不变式）；禁止只写英文注释，也禁止给显而易见的代码刷注释。
 - 退出登录入口必须 `logout()` 后显式 `router.push('/login')`（守卫不拦原地状态变化）。
 - 日报类「列表加载后自动选中第一条」场景用带 `immediate: true` 的 watch。
 - **切换会话 / 离开 AgentChatPage 时必须调 `stream.abort()`**（切换：`selectConversation` / `startDraft`；离开：`onBeforeUnmount`）——无条件调用（abort 内部幂等），顺带清停止残影；只有「停止生成」用 `abort({ keepPartial: true })` 保留中断残影。
@@ -268,5 +271,5 @@ userNearBottom = scrollHeight - scrollTop - clientHeight < 80  // 阈值 80px
 3. 涉及鉴权/路由的改动，浏览器手动验证：匿名可直接访问所有页面且 Navbar 显示「登录」；登录 → 回 `redirect` 来源页；退出 → 回 `/login` 且 localStorage 双 token 清空；token 过期 → 自动刷新无感继续（Network 面板可见 `/auth/refresh`）；刷新失败 → 静默登出留在当前页（Navbar 变回「登录」）。
 
 ---
-**版本**: v3.7（DSH 交互移植：思维链行/工具四态/子代理嵌套轨迹/后台任务 pill/排队/斜杠命令/轮次计时 + 两类竞态防线）
-**最后更新**: 2026-08-16
+**版本**: v3.8（股票观察池：B 信号勾选入池盯 S（upbs `'0'`，见 CONTEXT.md 与 docs/adr/0001）、出 S 标红手动剔除、后端交易日 10:00/14:50 cron refresh 重扫 + 首页 WatchlistCard）
+**最后更新**: 2026-08-25
