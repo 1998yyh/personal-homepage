@@ -134,14 +134,14 @@ const { width, dragging, onPointerDown, reset } = useStudioRailWidth()
         </button>
         <button
           type="button"
-          class="studio-rail-del absolute top-0 right-0 z-10 flex h-9 w-9 items-start justify-end pt-0.5 pr-0.5 text-white opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:text-danger"
+          class="studio-rail-del absolute top-0.5 right-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-md text-white opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:text-danger"
           title="删除"
           aria-label="删除"
           @click.stop="emit('remove', item.key)"
         >
           <AppIcon
             name="x"
-            :size="12"
+            :size="11"
           />
         </button>
       </div>
@@ -192,12 +192,12 @@ const { width, dragging, onPointerDown, reset } = useStudioRailWidth()
   background: color-mix(in oklch, var(--fg) 38%, transparent);
 }
 
-/* 右上角径向淡出，避免 linear 切出一块三角 */
+/* 热区贴叉号：64 缩略图上 20px，避免点选记录误触删除 */
 .studio-rail-del {
-  background: radial-gradient(120% 120% at 100% 0%, rgb(0 0 0 / 0.45) 0%, rgb(0 0 0 / 0) 70%);
+  background: rgb(0 0 0 / 0.5);
 }
 .studio-rail-del :deep(svg) {
-  filter: drop-shadow(0 0 2px rgb(0 0 0 / 0.55));
+  filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.55));
 }
 </style>
 
