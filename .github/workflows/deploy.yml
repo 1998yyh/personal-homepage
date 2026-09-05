@@ -2,6 +2,8 @@ name: deploy
 
 # 前端部署：CI 构建 dist（几 MB，跨境 rsync 没问题）→ 同步到服务器 nginx 根目录。
 # 触发：push 到 main 自动 + 手动。回滚 = 重跑旧 ref 的 workflow。纯文档改动不触发。
+# 与后端（tuanzi-server-base）共用同一套 SSH secrets / SERVER_* vars；
+# 前端不在服务器上构建，也不下发 .env.production。
 on:
   push:
     branches: [main]
@@ -11,7 +13,8 @@ on:
 
 concurrency:
   group: deploy-frontend
-  cancel-in-progress: true
+  # rsync --delete 中途被杀会留下半套 dist，禁止取消进行中的部署
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -53,6 +56,10 @@ jobs:
       - name: 健康检查
         run: |
           ssh -o BatchMode=yes ${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }} '
-            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/ || echo 000)
-            if [ "$code" = "200" ]; then echo "✅ 首页就绪 (HTTP $code)"; else echo "❌ HTTP $code"; exit 1; fi
+            for i in $(seq 1 10); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/ || echo 000)
+              if [ "$code" = "200" ]; then echo "✅ 首页就绪 (HTTP $code)"; exit 0; fi
+              echo "   等待中... ($i/10, HTTP $code)"; sleep 2
+            done
+            echo "❌ 健康检查失败"; exit 1
           '
