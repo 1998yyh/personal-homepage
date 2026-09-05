@@ -17,6 +17,7 @@ const navItems = [
   { path: '/channels', label: '渠道', activePattern: /\/channels/ },
   { path: '/assets', label: '素材', activePattern: /\/assets/ },
   { path: '/agents', label: 'Agent', activePattern: /\/agents/ },
+  { path: '/studio', label: '生成台', activePattern: /\/studio/ },
 ]
 
 const isActive = (pattern: RegExp) => pattern.test(route.path)

@@ -20,17 +20,28 @@ const router = createRouter({
     { path: '/channels', component: () => import('../pages/Channels/ChannelsPage.vue') },
     { path: '/prompts', component: () => import('../pages/Prompts/PromptsPage.vue') },
     { path: '/assets', component: () => import('../pages/Assets/AssetsPage.vue') },
+    // 生成台：全站首条需登录路由（meta.requiresAuth，守卫硬拦，见 docs/adr/0002）
+    { path: '/studio', redirect: '/studio/image' },
+    {
+      path: '/studio/:tab',
+      component: () => import('../pages/Studio/StudioPage.vue'),
+      meta: { requiresAuth: true },
+    },
     { path: '/daily-reports', redirect: '/ai-news' },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
 
-// 全局前置守卫：首次导航尝试拉取用户资料（有 token 才发请求），
-// 不再强制登录——所有页面公开访问，登录仅用于展示用户信息
-router.beforeEach(async () => {
+// 全局前置守卫：首次导航尝试拉取用户资料（有 token 才发请求）。
+// 绝大多数页面公开访问；仅 meta.requiresAuth 的路由（如 /studio/*）需登录，
+// 未登录重定向登录页并带 redirect 回跳（见 docs/adr/0002）。
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
   if (auth.isLoading) {
     await auth.fetchProfile()
+  }
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return { path: '/login', query: { redirect: to.fullPath } }
   }
   return true
 })
