@@ -125,6 +125,17 @@ pnpm build
 
 输出文件在 `dist/` 目录。
 
+## GitHub Actions 部署
+
+`.github/workflows/deploy.yml` 会在 `main` 分支代码推送（非纯文档变更）或手动触发时执行：先使用 Node.js + pnpm 构建，再通过 SSH 将 `dist/` 同步到服务器并检查首页是否返回 HTTP 200。
+
+首次启用前，在仓库的 Actions 配置中添加以下项目：
+
+- **Variables**：`SERVER_USER`、`SERVER_HOST`、`REMOTE_DIR`（例如 `/var/www/personal-homepage`）、`VITE_API_URL`（固定为 `/api`）
+- **Secrets**：`DEPLOY_SSH_KEY`（部署私钥）、`SSH_KNOWN_HOSTS`（目标服务器的 known_hosts 内容）
+
+生产构建固定使用 `VITE_API_URL=/api`，与 Nginx 同源反向代理配置一致。
+
 ## 开发说明
 
 ### 后端要求
