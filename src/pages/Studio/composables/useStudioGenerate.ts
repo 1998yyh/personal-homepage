@@ -34,8 +34,6 @@ export function useStudioGenerate() {
 
   async function hydrate(capability: StudioCapability, taskIdFromUrl?: string) {
     const s = store.session(capability)
-    // 只有首次拉列表才自动选最近一条；否则点「+」清掉 ?t= 后会被这条逻辑又选回去。
-    const firstVisit = !s.hydrated
     if (!s.hydrated) {
       try {
         await loadPage(capability, 1, false)
@@ -60,14 +58,11 @@ export function useStudioGenerate() {
           return
         }
       } catch {
-        /* 无效 t 忽略 */
+        /* 无效 t 忽略，落到下面的草稿态 */
       }
     }
-    if (s.selectedKey) return
-    if (firstVisit && s.items.length) {
-      store.selectItem(capability, s.items[0].key)
-      await fillRefs(capability, s.items[0])
-    }
+    // 进页默认「新的一次」：不自动选历史第一条。有 ?t= 或栏里已选中才还原。
+    // 不清 composer——切 Tab 再回来时，未发送的草稿还在。
   }
 
   async function loadMore(capability: StudioCapability) {

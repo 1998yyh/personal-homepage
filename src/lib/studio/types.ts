@@ -49,7 +49,7 @@ export interface StudioSession {
   items: StudioResult[]
   /** null = 「新的一次」，主区居中 composer、不展示结果 */
   selectedKey: string | null
-  /** 该能力是否已拉过第一页任务；防点「+」后被 hydrate 再选中最近一条 */
+  /** 该能力是否已拉过第一页任务；避免进页 / 切 Tab 重复请求列表 */
   hydrated: boolean
   listPage: number
   listHasMore: boolean

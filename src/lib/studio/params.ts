@@ -50,6 +50,9 @@ export const VIDEO_SIZE_OPTIONS = [
 ] as const
 export const VIDEO_SIZES = VIDEO_SIZE_OPTIONS.map((o) => o.value)
 
+/** 比例芯片第一行：自动 / 16:9 / 9:16 / 1:1，其余进「更多」。 */
+export const VIDEO_SIZE_PRIMARY = VIDEO_SIZE_OPTIONS.slice(0, 4)
+
 /** 时长主档；空串「默认」和 -1「自动」收进更多，避免三个语义并列。 */
 export const VIDEO_SECONDS_PRIMARY = ['5', '8', '10', '15'] as const
 // 照抄画布 NodeConfigContent：含空串「默认」+ '-1' 自动，共 6 档
