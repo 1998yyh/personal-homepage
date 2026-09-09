@@ -271,5 +271,5 @@ userNearBottom = scrollHeight - scrollTop - clientHeight < 80  // 阈值 80px
 3. 涉及鉴权/路由的改动，浏览器手动验证：匿名可直接访问所有页面且 Navbar 显示「登录」；登录 → 回 `redirect` 来源页；退出 → 回 `/login` 且 localStorage 双 token 清空；token 过期 → 自动刷新无感继续（Network 面板可见 `/auth/refresh`）；刷新失败 → 静默登出留在当前页（Navbar 变回「登录」）。
 
 ---
-**版本**: v3.8（股票观察池：B 信号勾选入池盯 S（upbs `'0'`，见 CONTEXT.md 与 docs/adr/0001）、出 S 标红手动剔除、后端交易日 10:00/14:50 cron refresh 重扫 + 首页 WatchlistCard）
+**版本**: v3.8（股票观察池：B 信号勾选入池盯 S（upbs `'0'`，见 CONTEXT.md）、出 S 标红手动剔除、后端交易日 10:00/14:50 cron refresh 重扫 + 首页 WatchlistCard）
 **最后更新**: 2026-08-25

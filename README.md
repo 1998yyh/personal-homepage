@@ -56,7 +56,6 @@ pnpm dev:online   # 直连线上后端：加载 .env.online，由 Vite 代理 /a
 - 会话懒创建、删除、历史消息分页加载、会话搜索过滤
 - Kimi 式交互：智能滚动（上翻不吸底 + 回到底部悬浮钮）、「正在思考」占位、
   草稿态欢迎屏（建议问题 chips）、消息 hover 复制、发送后自动聚焦
-- 设计文档见 `docs/superpowers/specs/2026-07-24-agent-pages-design.md`
 
 ### 🎨 设计特点
 - 现代暗色玻璃态设计（Glassmorphism）

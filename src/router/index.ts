@@ -20,7 +20,7 @@ const router = createRouter({
     { path: '/channels', component: () => import('../pages/Channels/ChannelsPage.vue') },
     { path: '/prompts', redirect: '/studio' },
     { path: '/assets', component: () => import('../pages/Assets/AssetsPage.vue') },
-    // 生成台：全站首条需登录路由（meta.requiresAuth，守卫硬拦，见 docs/adr 0002）
+    // 生成台：全站首条需登录路由（meta.requiresAuth，守卫硬拦）
     { path: '/studio', redirect: '/studio/image' },
     // 必须写在 :tab 前面，否则 history 会被当成 tab 参数。
     { path: '/studio/history', redirect: '/studio/image' },
@@ -36,7 +36,7 @@ const router = createRouter({
 
 // 全局前置守卫：首次导航尝试拉取用户资料（有 token 才发请求）。
 // 绝大多数页面公开访问；仅 meta.requiresAuth 的路由（如 /studio/*）需登录，
-// 未登录重定向登录页并带 redirect 回跳（见 docs/adr/0002）。
+// 未登录重定向登录页并带 redirect 回跳。
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
   if (auth.isLoading) {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 全站首个第三方组件层：reka-ui（headless）Select 封装，样式全接 od-* 设计令牌、
-// 随 data-theme 亮暗自动切换（见 docs/adr/0003）。收起态复用 .od-input 观感，
+// 随 data-theme 亮暗自动切换。收起态复用 .od-input 观感，
 // 展开浮层是自绘的 —— 解决原生 <select> 系统弹层 CSS 不可控、视觉割裂的问题。
 import {
   SelectRoot,
