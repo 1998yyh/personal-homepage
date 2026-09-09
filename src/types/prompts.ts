@@ -18,8 +18,10 @@ export interface Prompt {
   imageSize?: string
   imageCount?: number
   sourceId: string
-  /** 源名称（即分类） */
+  /** 内部用途分类 */
   category: string
+  canEdit: boolean
+  sourceName: string
   githubUrl: string
 }
 
@@ -28,6 +30,7 @@ export interface PromptListResponse {
   tags: string[]
   categories: string[]
   total: number
+  canManage: boolean
 }
 
 export interface PromptSourceView {
@@ -69,4 +72,13 @@ export interface PromptSourcePayload {
   homepage?: string
 }
 
-export const ALL_PROMPTS_OPTION = 'all'
+
+export interface PromptPayload {
+  title: string
+  prompt: string
+  description: string
+  category: string
+  tags: string[]
+  coverUrl: string
+  referenceImageUrls: string[]
+}

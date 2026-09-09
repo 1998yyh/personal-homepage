@@ -18,7 +18,7 @@ const router = createRouter({
     { path: '/canvas', component: () => import('../pages/Canvas/CanvasListPage.vue') },
     { path: '/canvas/:id', component: () => import('../pages/Canvas/CanvasEditorPage.vue') },
     { path: '/channels', component: () => import('../pages/Channels/ChannelsPage.vue') },
-    { path: '/prompts', component: () => import('../pages/Prompts/PromptsPage.vue') },
+    { path: '/prompts', redirect: '/studio' },
     { path: '/assets', component: () => import('../pages/Assets/AssetsPage.vue') },
     // 生成台：全站首条需登录路由（meta.requiresAuth，守卫硬拦，见 docs/adr 0002）
     { path: '/studio', redirect: '/studio/image' },

@@ -44,7 +44,7 @@ src/
     │                   #   MiniMap/菜单）+ composables/（viewport/drag/resize/marquee/connection/
     │                   #   keyboard/generation/task-watcher）
     ├── Channels/       # AI 渠道管理（卡片 + 抽屉表单，apiKey 只写不读）
-    ├── Prompts/        # 提示词库（左源管理 + 右卡片/搜索/分页）
+    ├── Prompts/        # 内部提示词库（生成台侧栏；分类/标签筛选、按 canManage 新增、按 canEdit 编辑、按 canEdit 删除）
     ├── Assets/         # 素材库（kind Tab + 搜索 + ZIP 导入导出）
     ├── StockSignals/   # B 信号筛选 + 观察池双 Tab（次级页，不进 Navbar；入口在 StockReportsPage；扫描需登录、
     │                   #   结果公开；观察池登录私有：勾选入池盯 S，出 S 标红，?tab=pool 直达，WatchlistPanel 在 components/）

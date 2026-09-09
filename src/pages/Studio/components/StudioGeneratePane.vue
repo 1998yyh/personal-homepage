@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 生成台组合面：历史栏 + 主区当前结果 + composer。会话在 Pinia。
+// 生成台组合面：历史栏 + 主区当前结果 + composer + 右侧词库。会话在 Pinia。
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuery } from '@tanstack/vue-query'
@@ -13,8 +13,10 @@ import StudioHistoryRail from './StudioHistoryRail.vue'
 import StudioComposer from './StudioComposer.vue'
 import StudioResultStage from './StudioResultStage.vue'
 import ResultLightbox from './ResultLightbox.vue'
+import PromptLibraryPanel from '../../Prompts/components/PromptLibraryPanel.vue'
 
 const props = defineProps<{ capability: ModelCapability }>()
+const libraryOpen = defineModel<boolean>('libraryOpen', { required: true })
 const cap = computed(() => props.capability as StudioCapability)
 
 const store = useStudioStore()
@@ -54,7 +56,7 @@ onBeforeUnmount(() => {
   if (nowTimer) clearInterval(nowTimer)
 })
 
-// 进页 / 切能力：按 ?t= hydrate；没有 t 且首次进入则选最近一条，再把真实 taskId 写回 URL。
+// 进页 / 切能力：有 ?t= 则还原该任务；没有则保持草稿（新建），不自动选历史第一条。
 watch(
   () => [cap.value, route.query.t] as const,
   async ([capability, t]) => {
@@ -114,6 +116,15 @@ function onRetry() {
 function onPreview() {
   if (selected.value) store.openPreview(cap.value, selected.value.key)
 }
+
+function onPickPrompt(text: string) {
+  store.session(cap.value).composer.prompt = text
+  // 窄屏选完即收浮层，露出已填好的输入框；宽屏侧栏保持开着方便连选。
+  if (window.matchMedia('(max-width: 767px)').matches) libraryOpen.value = false
+}
+
+// 词库只有图片源：视频 / 音频台不挂侧栏，避免占宽还填进不匹配的提示词。
+const libraryVisible = computed(() => cap.value === 'image' && libraryOpen.value)
 </script>
 
 <template>
@@ -156,6 +167,27 @@ function onPreview() {
       </div>
     </div>
 
+    <button
+      v-show="libraryVisible"
+      type="button"
+      class="prompt-rail-backdrop md:hidden"
+      aria-label="关闭词库"
+      @click="libraryOpen = false"
+    />
+    <aside
+      v-if="cap === 'image'"
+      id="studio-prompt-library"
+      class="prompt-rail"
+      :class="{ 'is-open': libraryOpen }"
+      :inert="!libraryOpen"
+      :aria-hidden="libraryOpen ? undefined : 'true'"
+    >
+      <PromptLibraryPanel
+        @select="onPickPrompt"
+        @close="libraryOpen = false"
+      />
+    </aside>
+
     <ResultLightbox
       v-if="previewResult && store.preview"
       :result="previewResult"
@@ -166,3 +198,54 @@ function onPreview() {
     />
   </div>
 </template>
+
+<style scoped>
+.prompt-rail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: oklch(20% 0.02 240 / 0.4);
+}
+.prompt-rail {
+  display: none;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+}
+@media (max-width: 767px) {
+  .prompt-rail {
+    display: flex;
+    position: fixed;
+    top: 4rem;
+    right: 0;
+    bottom: 0;
+    z-index: 41;
+    width: min(26.25rem, 92vw);
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-lift);
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .prompt-rail.is-open {
+    transform: none;
+    visibility: visible;
+    pointer-events: auto;
+  }
+}
+@media (min-width: 768px) {
+  .prompt-rail.is-open {
+    display: flex;
+    /* 三列封面卡：12px 边距 + 8px 间隙，单卡约 126px。 */
+    width: 26.25rem;
+    flex-shrink: 0;
+    height: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prompt-rail {
+    transition: none;
+  }
+}
+</style>
