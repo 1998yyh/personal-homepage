@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { useQuery } from '@tanstack/vue-query'
+import { channelsApi } from '../../../lib/channels-api'
+import VideoModelConfigEditor from './VideoModelConfigEditor.vue'
 import type { AiChannelView, ChannelModel, ChannelPayload, ModelCapability } from '../../../types/ai-generation'
 import { ApiFormat } from '../../../types/ai-generation'
 import AppIcon from '../../../components/AppIcon.vue'
@@ -37,6 +40,8 @@ const CAPABILITY_OPTIONS: Array<{ value: ModelCapability; label: string }> = [
 interface FormModel {
   name: string
   capabilities: ModelCapability[]
+  originals: Partial<Record<ModelCapability, ChannelModel>>
+  videoConfig?: ChannelModel['videoConfig']
 }
 
 const BASE_URL_PLACEHOLDERS: Record<string, string> = {
@@ -55,6 +60,34 @@ const form = reactive({
   models: [] as FormModel[],
 })
 
+const selectedPreset = ref('')
+const showAdvanced = ref(false)
+const { data: catalog, isPending: presetsPending, isError: presetsError } = useQuery({
+  queryKey: ['ai-channel-presets'], queryFn: channelsApi.presets,
+})
+const presetOptions = computed(() => [
+  ...(catalog.value?.presets ?? []).map((p) => ({ value: p.id, label: p.name })),
+  { value: 'custom', label: '自定义渠道' },
+])
+const advancedVisible = computed(() => isEdit.value || selectedPreset.value === 'custom' || showAdvanced.value)
+function applyPreset(id: string | undefined) {
+  if (!id) return
+  selectedPreset.value = id
+  if (id === 'custom') return
+  const preset = catalog.value?.presets.find((p) => p.id === id)
+  if (!preset) return
+  form.name = preset.name
+  form.baseUrl = preset.baseUrl
+  form.apiFormat = preset.apiFormat
+  form.models = mergeModels(preset.models)
+}
+// 只在首次加载时填预设，后台刷新和模式切换均不覆盖已输入的密钥。
+watch(catalog, (value) => {
+  if (!isEdit.value && !selectedPreset.value && value) applyPreset(value.presets[0]?.id ?? 'custom')
+}, { immediate: true })
+watch(presetsError, (failed) => {
+  if (failed && !selectedPreset.value) selectedPreset.value = 'custom'
+}, { immediate: true })
 const showApiKey = ref(false)
 const localError = ref<string | null>(null)
 
@@ -80,16 +113,18 @@ function mergeModels(models: ChannelModel[]): FormModel[] {
     const i = indexByName.get(m.name)
     if (i == null) {
       indexByName.set(m.name, rows.length)
-      rows.push({ name: m.name, capabilities: [m.capability] })
+      rows.push({ name: m.name, capabilities: [m.capability], originals: { [m.capability]: JSON.parse(JSON.stringify(m)) }, videoConfig: m.videoConfig ? JSON.parse(JSON.stringify(m.videoConfig)) : undefined })
     } else if (!rows[i].capabilities.includes(m.capability)) {
       rows[i].capabilities.push(m.capability)
+      rows[i].originals[m.capability] = JSON.parse(JSON.stringify(m))
+      if (m.videoConfig) rows[i].videoConfig = JSON.parse(JSON.stringify(m.videoConfig))
     }
   }
   return rows
 }
 
 const addModel = () => {
-  form.models.push({ name: '', capabilities: ['image'] })
+  form.models.push({ name: '', capabilities: ['image'], originals: {} })
 }
 
 const toggleCapability = (model: FormModel, cap: ModelCapability) => {
@@ -130,11 +165,25 @@ const handleSubmit = () => {
       caps = new Set()
       seen.set(name, caps)
     }
-    for (const cap of row.capabilities) caps.add(cap)
+    for (const cap of row.capabilities) {
+      if (caps.has(cap)) {
+        localError.value = `「${name}」的${CAPABILITY_OPTIONS.find((o) => o.value === cap)?.label}用途重复，请合并或移除重复行`
+        return
+      }
+      caps.add(cap)
+    }
   }
   for (const [name, caps] of seen) {
     for (const opt of CAPABILITY_OPTIONS) {
-      if (caps.has(opt.value)) models.push({ name, capability: opt.value })
+      if (caps.has(opt.value)) {
+        const row = form.models.find((r) => r.name.trim() === name && r.capabilities.includes(opt.value))!
+        const model: ChannelModel = { ...row.originals[opt.value], name, capability: opt.value }
+        if (opt.value === 'video') {
+          if (row.videoConfig) model.videoConfig = row.videoConfig
+          else delete model.videoConfig
+        }
+        models.push(model)
+      }
     }
   }
   if (!models.length) {
@@ -147,6 +196,10 @@ const handleSubmit = () => {
     return
   }
 
+  if (form.apiFormat !== 'openai' && models.some((m) => m.videoConfig)) {
+    localError.value = '视频参数模板仅适用于 OpenAI 兼容格式，请先恢复渠道默认规则，或切回 OpenAI 兼容格式'
+    return
+  }
   const payload: ChannelPayload = {
     name: form.name.trim(),
     apiFormat: form.apiFormat,
@@ -188,7 +241,50 @@ const handleSubmit = () => {
       class="flex-1 min-h-0 overflow-y-auto px-6 py-5 flex flex-col gap-4"
       @submit.prevent="handleSubmit"
     >
-      <div>
+      <div
+        v-if="!isEdit"
+        class="space-y-2"
+      >
+        <label class="od-label">渠道方案</label>
+        <OdSelect
+          :model-value="selectedPreset"
+          :options="presetOptions"
+          placeholder="加载预设…"
+          @update:model-value="applyPreset"
+        />
+        <p
+          v-if="presetsPending"
+          class="text-xs text-muted"
+        >
+          正在加载预设，也可以选择自定义渠道。
+        </p>
+        <p
+          v-if="presetsError"
+          class="od-error"
+        >
+          预设加载失败，请稍后重试，或使用自定义渠道。
+        </p>
+        <div
+          v-if="selectedPreset && selectedPreset !== 'custom'"
+          class="rounded-xl border border-border p-3 text-xs text-muted space-y-2"
+        >
+          <p>填入此渠道的 API Key 即可使用以下模型。</p>
+          <p class="break-all">
+            {{ form.baseUrl }}
+          </p>
+          <p class="break-words">
+            {{ form.models.map(m => m.name).join('、') }}
+          </p>
+          <button
+            type="button"
+            class="text-accent-strong"
+            @click="showAdvanced = !showAdvanced"
+          >
+            {{ showAdvanced ? '收起配置' : '调整地址和模型' }}
+          </button>
+        </div>
+      </div>
+      <div v-if="advancedVisible">
         <label class="od-label">名称 *</label>
         <input
           v-model="form.name"
@@ -198,7 +294,7 @@ const handleSubmit = () => {
         >
       </div>
 
-      <div>
+      <div v-if="advancedVisible">
         <label class="od-label">API 格式 *</label>
         <OdSelect
           v-model="form.apiFormat"
@@ -209,7 +305,7 @@ const handleSubmit = () => {
         </p>
       </div>
 
-      <div>
+      <div v-if="advancedVisible">
         <label class="od-label">接口地址 *</label>
         <input
           v-model="form.baseUrl"
@@ -252,7 +348,7 @@ const handleSubmit = () => {
       </div>
 
       <!-- 模型清单 -->
-      <div>
+      <div v-if="advancedVisible">
         <div class="flex items-center justify-between mb-1.5">
           <label class="od-label !mb-0">模型清单 *</label>
           <button
@@ -310,6 +406,26 @@ const handleSubmit = () => {
                 {{ opt.label }}
               </button>
             </div>
+            <div
+              v-if="model.capabilities.includes('video') && model.videoConfig && form.apiFormat !== 'openai'"
+              class="text-xs space-y-2"
+            >
+              <p class="od-error">
+                此视频模板仅适用于 OpenAI 兼容格式。请选择该格式，或移除模板使用当前渠道的默认规则。
+              </p>
+              <button
+                type="button"
+                class="od-btn od-btn-ghost"
+                @click="model.videoConfig = undefined"
+              >
+                恢复渠道默认规则
+              </button>
+            </div>
+            <VideoModelConfigEditor
+              v-if="model.capabilities.includes('video') && form.apiFormat === 'openai'"
+              v-model="model.videoConfig"
+              :templates="catalog?.templates ?? []"
+            />
           </div>
           <p
             v-if="!form.models.length"

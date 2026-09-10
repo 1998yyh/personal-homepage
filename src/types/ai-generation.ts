@@ -17,9 +17,28 @@ export const ModelCapability = {
 } as const
 export type ModelCapability = (typeof ModelCapability)[keyof typeof ModelCapability]
 
+export interface VideoModelConfig {
+  template: 'text' | 'image' | 'first_last' | 'lipsync'
+  requestFormat: 'json' | 'multipart'
+  fields?: Partial<Record<'images' | 'firstFrame' | 'lastFrame' | 'audio' | 'seconds' | 'resolution' | 'aspectRatio', string>>
+  minImages?: number
+  maxImages?: number
+  maxSeconds?: number
+  resolutions?: string[]
+  fixedSeconds?: number
+  fixedResolution?: string
+}
+
+export interface ChannelPresetCatalog {
+  presets: Array<{ id: string; name: string; apiFormat: ApiFormat; baseUrl: string; models: ChannelModel[] }>
+  templates: Array<{ id: string; name: string; description: string; config: VideoModelConfig }>
+}
+
 export interface ChannelModel {
   name: string
   capability: ModelCapability
+  videoConfig?: VideoModelConfig
+  script?: string
 }
 
 export interface AiChannelView {

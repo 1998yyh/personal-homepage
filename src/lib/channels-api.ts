@@ -1,7 +1,11 @@
 import api from './api'
-import type { AiChannelView, ChannelPayload } from '../types/ai-generation'
+import type { AiChannelView, ChannelPayload, ChannelPresetCatalog } from '../types/ai-generation'
 
 export const channelsApi = {
+  presets: async () => {
+    const { data } = await api.get<ChannelPresetCatalog>('/ai-channels/presets')
+    return data
+  },
   list: async () => {
     const { data } = await api.get<AiChannelView[]>('/ai-channels')
     return data

@@ -5,6 +5,10 @@
 // 图片/音频同步返回后直接建节点；视频先建 pending 节点并落库（nodeRef 回填依赖服务端文档里有该节点），
 // 再带 nodeRef 创建任务，由 generation-poller 完成回填、useGenerationTaskWatcher 触发前端刷新。
 import { ref } from 'vue';
+import { channelsApi } from '../../../lib/channels-api';
+import { modelOptionsFor } from '../../../lib/studio/models';
+import { validateVideoInput } from '../../../lib/video-model-config';
+import { mediaApi } from '../../../lib/media-api';
 import { useCanvasStore } from '../../../stores/canvas';
 import { generationApi } from '../../../lib/generation-api';
 import { showToast } from '../../../composables/useToast';
@@ -159,7 +163,18 @@ export function useNodeGeneration() {
     generating.value = true;
     store.updateNodeMetadata(configNodeId, { status: 'loading', errorDetails: undefined });
     try {
-      if (mode === 'video') await runVideo(configNode, prompt, referenceMediaIds, projectId);
+      if (mode === 'video') {
+        // 在建结果节点前校验真实媒体类型，连线与生成台遵守同一模型规则。
+        const channels = await channelsApi.list();
+        const option = modelOptionsFor(channels, 'video').find((o) => o.value === meta.model);
+        if (!option) throw new Error('模型已停用或移除，请重新选择');
+        if (option.videoConfig) {
+          const media = await Promise.all(referenceMediaIds.map((id) => mediaApi.getById(id)));
+          const error = validateVideoInput(option.videoConfig, media, meta.seconds, meta.vquality, meta.size);
+          if (error) throw new Error(error);
+        }
+        await runVideo(configNode, prompt, referenceMediaIds, projectId);
+      }
       else if (mode === 'audio') await runAudio(configNode, prompt);
       else await runImage(configNode, prompt, referenceMediaIds);
       store.updateNodeMetadata(configNodeId, { status: 'success' });

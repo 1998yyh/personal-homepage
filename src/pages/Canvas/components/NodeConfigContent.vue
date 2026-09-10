@@ -5,9 +5,10 @@
 // 节点上显示配置摘要与「生成」按钮；点「配置」打开右侧抽屉（Teleport 到 body，
 // 因为节点在 CSS transform 世界里，fixed 定位会失真）。
 // 参考素材自动收集自连入的图片/视频/音频节点（metadata.mediaId），提示词可连文本节点拼入。
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import type { CanvasGenerationMode, CanvasNodeData, CanvasNodeMetadata } from '../../../types/canvas';
+import { videoRequirements } from '../../../lib/video-model-config';
 import { channelsApi, toModelRef } from '../../../lib/channels-api';
 import { useCanvasStore } from '../../../stores/canvas';
 import { useNodeGeneration } from '../composables/useNodeGeneration';
@@ -74,10 +75,40 @@ const modelOptions = computed(() =>
     .flatMap((c) =>
       c.models
         .filter((m) => m.capability === mode.value)
-        .map((m) => ({ value: toModelRef(c.id, m.name), label: `${c.name} / ${m.name}` })),
+        .map((m) => ({ value: toModelRef(c.id, m.name), videoConfig: m.videoConfig, label: `${c.name} / ${m.name}` })),
     ),
 );
 
+const videoConfig = computed(() => mode.value === 'video' ? modelOptions.value.find((o) => o.value === meta.value.model)?.videoConfig : undefined);
+const requirements = computed(() => videoRequirements(videoConfig.value));
+const videoSizes = computed(() => videoConfig.value ? VIDEO_SIZE_OPTIONS.filter((o) => ['auto', '16:9', '9:16', '1:1'].includes(o.value)) : VIDEO_SIZE_OPTIONS);
+const videoSeconds = computed(() => {
+  const config = videoConfig.value;
+  if (config?.fixedSeconds) return [{ value: String(config.fixedSeconds), label: `${config.fixedSeconds} 秒` }];
+  if (config) {
+    const max = config.maxSeconds ?? 15;
+    return [{ value: '', label: '默认' }, ...Array.from(new Set(['5', '8', '10', '15', String(max)])).filter((s) => Number(s) <= max).map((s) => ({ value: s, label: `${s} 秒` }))];
+  }
+  return VIDEO_SECONDS;
+});
+const videoQualities = computed(() => {
+  const config = videoConfig.value;
+  const values = config?.fixedResolution ? [config.fixedResolution] : config?.resolutions;
+  return values ? values.map((q) => ({ value: q, label: q })) : VIDEO_QUALITY_OPTIONS;
+});
+watch(videoConfig, (config) => {
+  if (!config) return;
+  const next: Partial<CanvasNodeMetadata> = {};
+  if (meta.value.size && !['auto', '16:9', '9:16', '1:1'].includes(meta.value.size)) next.size = 'auto';
+  if (config.fixedSeconds) next.seconds = String(config.fixedSeconds);
+  else if (Number(meta.value.seconds) > (config.maxSeconds ?? 15) || meta.value.seconds === '-1') next.seconds = String(Math.min(5, config.maxSeconds ?? 15));
+  next.vquality = videoQualities.value.find((q) => q.value.toLowerCase() === meta.value.vquality?.toLowerCase())?.value ?? videoQualities.value[0]?.value ?? '';
+  if (Object.keys(next).length) patch(next);
+}, { immediate: true });
+const frameLabels = computed(() => {
+  if (videoConfig.value?.template !== 'first_last') return [];
+  return store.connections.filter((c) => c.toNodeId === props.node.id).map((c) => store.nodes.find((n) => n.id === c.fromNodeId)).filter((n) => n?.type === 'image' && n.metadata?.mediaId).map((n, i) => `${i === 0 ? '首帧' : i === 1 ? '尾帧' : '多余图片'}：${n?.title || n?.id}`);
+});
 const modeLabel = computed(() => MODE_OPTIONS.find((m) => m.value === mode.value)?.label || '图片');
 const modelLabel = computed(() => {
   const current = meta.value.model;
@@ -184,6 +215,19 @@ function handleGenerate() {
         </div>
 
         <div class="flex-1 min-h-0 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+          <p
+            v-if="requirements"
+            class="text-xs text-muted"
+          >
+            {{ requirements }}。画布按连线添加顺序取图。
+          </p>
+          <p
+            v-for="label in frameLabels"
+            :key="label"
+            class="text-xs text-muted"
+          >
+            {{ label }}
+          </p>
           <div>
             <label class="od-label">生成方式</label>
             <div class="flex gap-2">
@@ -274,7 +318,7 @@ function handleGenerate() {
                 <label class="od-label">时长</label>
                 <OdSelect
                   :model-value="meta.seconds ?? ''"
-                  :options="VIDEO_SECONDS"
+                  :options="videoSeconds"
                   @update:model-value="(v) => patch({ seconds: v || undefined })"
                 />
               </div>
@@ -282,7 +326,7 @@ function handleGenerate() {
                 <label class="od-label">比例</label>
                 <OdSelect
                   :model-value="meta.size || 'auto'"
-                  :options="VIDEO_SIZE_OPTIONS"
+                  :options="videoSizes"
                   @update:model-value="(v) => patch({ size: v })"
                 />
               </div>
@@ -291,7 +335,9 @@ function handleGenerate() {
               <label class="od-label">清晰度</label>
               <OdSelect
                 :model-value="meta.vquality || '720p'"
-                :options="VIDEO_QUALITY_OPTIONS"
+                :options="videoQualities"
+                :placeholder="videoQualities.length ? '选择清晰度' : '清晰度由模型决定'"
+                :disabled="!videoQualities.length"
                 @update:model-value="(v) => patch({ vquality: v })"
               />
             </div>

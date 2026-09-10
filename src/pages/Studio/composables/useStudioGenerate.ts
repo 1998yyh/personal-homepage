@@ -16,6 +16,7 @@ import {
 import { downloadBlob } from '../../../lib/zip'
 import { showToast } from '../../../composables/useToast'
 import { useStudioStore } from '../../../stores/studio'
+import { validateVideoInput } from '../../../lib/video-model-config'
 import { channelsApi } from '../../../lib/channels-api'
 import { GenerationTaskStatus } from '../../../types/ai-generation'
 import type { MediaFileView } from '../../../types/media'
@@ -145,6 +146,18 @@ export function useStudioGenerate() {
       return
     }
 
+    if (capability === 'video') {
+      try {
+        const channels = await channelsApi.list()
+        const option = modelOptionsFor(channels, capability).find((o) => o.value === c.modelRef)
+        if (!option) { store.setFormError(capability, '模型已停用或移除，请重新选择'); return }
+        const error = validateVideoInput(option.videoConfig, c.referenceMedia, c.videoSeconds, c.videoQuality, c.videoSize)
+        if (error) { store.setFormError(capability, error); return }
+      } catch {
+        store.setFormError(capability, '无法读取模型配置，请稍后重试')
+        return
+      }
+    }
     let label = modelLabelHint || from?.model || ''
     if (!label) {
       const channels = await channelsApi.list().catch(() => [])

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 参考图双来源：本地上传（mediaApi.upload）+ 素材库选取（assetsApi.list image）。
 // 一律先落媒体库拿 mediaId，v-model 存 MediaFileView[]，生成时取 id 经 referenceMediaIds 传入。
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { mediaApi, mediaUrl } from '../../../lib/media-api'
 import { assetsApi } from '../../../lib/assets-api'
@@ -11,7 +11,13 @@ import AppIcon from '../../../components/AppIcon.vue'
 
 // 已选参考媒体（父存 MediaFileView[]，生成时 .map(m => m.id)）
 // compact：composer 底栏自己放「参考 / 素材库」，这里只渲染已选缩略图 + 隐藏 file input。
-withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
+const props = withDefaults(defineProps<{ compact?: boolean; allowAudio?: boolean; firstLast?: boolean }>(), { compact: false, allowAudio: false, firstLast: false })
+const accept = computed(() => props.allowAudio ? 'image/*,audio/*' : 'image/*')
+function referenceLabel(m: MediaFileView) {
+  if (m.kind === 'audio') return '音频'
+  const index = model.value.filter((item) => item.kind === 'image').findIndex((item) => item.id === m.id)
+  return props.firstLast ? (index === 0 ? '首帧' : index === 1 ? '尾帧' : '多余图片') : ''
+}
 const model = defineModel<MediaFileView[]>({ default: () => [] })
 
 const uploading = ref(false)
@@ -35,7 +41,7 @@ function removeMedia(id: string) {
 }
 
 async function uploadFiles(files: File[]) {
-  const images = files.filter((f) => f.type.startsWith('image/'))
+  const images = files.filter((f) => f.type.startsWith('image/') || (props.allowAudio && f.type.startsWith('audio/')))
   if (!images.length) return
   uploadError.value = ''
   uploading.value = true
@@ -78,7 +84,7 @@ function pickAsset(media: MediaFileView | null) {
 <template>
   <div
     @dragover.prevent
-    @drop.prevent="onDrop"
+    @drop.stop.prevent="onDrop"
   >
     <!-- 已选缩略图 -->
     <div
@@ -90,11 +96,20 @@ function pickAsset(media: MediaFileView | null) {
         :key="m.id"
         class="relative h-12 w-12 overflow-hidden rounded-lg border border-border"
       >
+        <span
+          v-if="m.kind === 'audio'"
+          class="flex h-full items-center justify-center text-xs"
+        >音频</span>
         <img
+          v-else
           :src="mediaUrl(m.url)"
           :alt="m.fileName"
           class="h-full w-full object-cover"
         >
+        <span
+          v-if="referenceLabel(m)"
+          class="absolute bottom-0 inset-x-0 bg-bg/90 text-center text-[10px]"
+        >{{ referenceLabel(m) }}</span>
         <button
           class="absolute top-0.5 right-0.5 grid h-5 w-5 place-items-center rounded-full bg-bg/80 text-fg hover:bg-danger/15 hover:text-danger"
           aria-label="移除"
@@ -123,7 +138,7 @@ function pickAsset(media: MediaFileView | null) {
         v-if="!compact"
         class="w-full text-xs text-muted"
       >
-        添加参考图，可拖入
+        添加参考素材，可拖入
       </p>
       <button
         class="od-btn od-btn-ghost text-xs"
@@ -134,7 +149,7 @@ function pickAsset(media: MediaFileView | null) {
           name="upload"
           :size="14"
         />
-        {{ uploading ? '上传中…' : '添加参考图' }}
+        {{ uploading ? '上传中…' : '添加参考素材' }}
       </button>
       <button
         class="od-btn od-btn-ghost text-xs"
@@ -156,7 +171,7 @@ function pickAsset(media: MediaFileView | null) {
     <input
       ref="fileInput"
       type="file"
-      accept="image/*"
+      :accept="accept"
       multiple
       class="hidden"
       @change="onFilePick"
@@ -171,7 +186,7 @@ function pickAsset(media: MediaFileView | null) {
       <div class="od-panel flex max-h-[70vh] w-[min(560px,92vw)] flex-col p-5">
         <div class="flex items-center justify-between">
           <h3 class="text-base font-semibold text-fg">
-            从素材库选参考图
+            从素材库选参考素材
           </h3>
           <button
             class="od-icon-btn"
@@ -184,6 +199,12 @@ function pickAsset(media: MediaFileView | null) {
             />
           </button>
         </div>
+        <p
+          v-if="allowAudio"
+          class="mt-3 text-xs text-muted"
+        >
+          素材库提供图片；音频请通过上传按钮添加。
+        </p>
         <div class="mt-4 min-h-0 flex-1 overflow-y-auto">
           <p
             v-if="isFetching"
@@ -195,7 +216,7 @@ function pickAsset(media: MediaFileView | null) {
             v-else-if="!assetData?.items.length"
             class="py-6 text-center text-sm text-muted"
           >
-            素材库暂无图片素材
+            素材库暂无此类素材
           </p>
           <div
             v-else
@@ -209,11 +230,15 @@ function pickAsset(media: MediaFileView | null) {
               @click="pickAsset(a.media)"
             >
               <img
-                v-if="a.media"
+                v-if="a.media?.kind === 'image'"
                 :src="mediaUrl(a.media.url)"
                 :alt="a.title"
                 class="h-full w-full object-cover"
               >
+              <span
+                v-if="a.media?.kind === 'audio'"
+                class="text-xs"
+              >{{ a.title }}</span>
             </button>
           </div>
         </div>

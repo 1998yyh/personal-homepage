@@ -27,6 +27,7 @@ import { mediaApi } from '../../../lib/media-api'
 import type { ModelOption } from '../../../lib/studio/models'
 import type { ModelCapability } from '../../../types/ai-generation'
 import ReferencePicker from './ReferencePicker.vue'
+import { videoRequirements } from '../../../lib/video-model-config'
 
 const props = defineProps<{
   capability: ModelCapability
@@ -48,10 +49,26 @@ const showMoreAudio = ref(false)
 const dragging = ref(false)
 const refPicker = useTemplateRef('refPicker')
 
+const videoConfig = computed(() => props.capability === 'video' ? props.modelOptions.find((o) => o.value === composer.value.modelRef)?.videoConfig : undefined)
+const requirements = computed(() => videoRequirements(videoConfig.value))
+const videoQualities = computed(() => videoConfig.value?.fixedResolution ? [videoConfig.value.fixedResolution] : videoConfig.value?.resolutions ?? VIDEO_QUALITIES)
+// 模型改变时仅修正不支持的参数，不删除用户已经选择的素材。
+watch(videoConfig, (config) => {
+  if (!config) return
+  if (!['auto', '16:9', '9:16', '1:1'].includes(composer.value.videoSize)) composer.value.videoSize = 'auto'
+  if (config.fixedSeconds) composer.value.videoSeconds = String(config.fixedSeconds)
+  else if (Number(composer.value.videoSeconds) > (config.maxSeconds ?? 15) || composer.value.videoSeconds === '-1') composer.value.videoSeconds = String(Math.min(5, config.maxSeconds ?? 15))
+  composer.value.videoQuality = videoQualities.value.find((q) => q.toLowerCase() === composer.value.videoQuality.toLowerCase()) ?? videoQualities.value[0] ?? ''
+}, { immediate: true })
 const imageSizes = computed(() =>
   showMoreSizes.value ? IMAGE_SIZE_OPTIONS : IMAGE_SIZE_PRIMARY,
 )
 const videoSeconds = computed(() => {
+  if (videoConfig.value?.fixedSeconds) return [String(videoConfig.value.fixedSeconds)]
+  if (videoConfig.value) {
+    const max = videoConfig.value.maxSeconds ?? 15
+    return ['', ...Array.from(new Set([...VIDEO_SECONDS_PRIMARY, String(max)])).filter((s) => Number(s) <= max)]
+  }
   const extra =
     composer.value.videoSeconds === '' || composer.value.videoSeconds === '-1'
   return showMoreVideo.value || extra
@@ -59,6 +76,7 @@ const videoSeconds = computed(() => {
     : VIDEO_SECONDS_PRIMARY
 })
 const videoSizes = computed(() => {
+  if (videoConfig.value) return VIDEO_SIZE_OPTIONS.filter((o) => ['auto', '16:9', '9:16', '1:1'].includes(o.value))
   const extra = !VIDEO_SIZE_PRIMARY.some((o) => o.value === composer.value.videoSize)
   return showMoreVideo.value || extra ? VIDEO_SIZE_OPTIONS : VIDEO_SIZE_PRIMARY
 })
@@ -146,7 +164,7 @@ function ratioChipClass(on: boolean) {
 async function onDrop(e: DragEvent) {
   dragging.value = false
   if (props.capability === 'audio') return
-  const files = [...(e.dataTransfer?.files ?? [])].filter((f) => f.type.startsWith('image/'))
+  const files = [...(e.dataTransfer?.files ?? [])].filter((f) => f.type.startsWith('image/') || (videoConfig.value?.template === 'lipsync' && f.type.startsWith('audio/')))
   for (const file of files) {
     try {
       const media = await mediaApi.upload(file)
@@ -187,8 +205,17 @@ async function onDrop(e: DragEvent) {
         ref="refPicker"
         v-model="composer.referenceMedia"
         compact
+        :allow-audio="videoConfig?.template === 'lipsync'"
+        :first-last="videoConfig?.template === 'first_last'"
         :class="composer.referenceMedia.length ? 'px-3 pt-3' : ''"
       />
+
+      <p
+        v-if="requirements"
+        class="px-4 pt-3 text-xs text-muted"
+      >
+        {{ requirements }}
+      </p>
 
       <textarea
         ref="promptInput"
@@ -302,8 +329,12 @@ async function onDrop(e: DragEvent) {
               </button>
             </div>
             <div class="composer-group">
+              <span
+                v-if="!videoQualities.length"
+                class="text-xs text-muted"
+              >清晰度由模型决定</span>
               <button
-                v-for="q in VIDEO_QUALITIES"
+                v-for="q in videoQualities"
                 :key="q"
                 type="button"
                 :class="chipClass(composer.videoQuality === q)"
@@ -373,7 +404,7 @@ async function onDrop(e: DragEvent) {
             <button
               type="button"
               class="composer-tool-btn"
-              title="从本地上传参考图"
+              title="从本地上传参考素材"
               :disabled="refPicker?.uploading"
               @click="refPicker?.pickFile()"
             >
@@ -387,7 +418,7 @@ async function onDrop(e: DragEvent) {
               type="button"
               class="composer-tool-btn"
               :class="{ 'is-on': composer.referenceMedia.length > 0 }"
-              title="从素材库选择参考图"
+              title="从素材库选择参考素材"
               @click="refPicker?.openLibrary()"
             >
               <AppIcon
