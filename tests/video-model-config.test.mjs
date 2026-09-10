@@ -28,3 +28,15 @@ test('配置模板仅接受受支持的比例，旧模型不受影响', () => {
   assert.equal(validateVideoInput({ template: 'text', requestFormat: 'json' }, [], '', '', '16:9'), '')
   assert.equal(validateVideoInput(undefined, [], '', '', '4:3'), '')
 })
+
+test('视频模型选项直接说明名称和素材要求', async () => {
+  const { videoModelPresentation } = await import('../src/lib/video-model-config.ts')
+  const firstLast = videoModelPresentation('minimax_h3_first_last', { template: 'first_last', requestFormat: 'json' })
+  assert.match(firstLast.label, /首尾帧/)
+  assert.match(firstLast.description, /2 张图片/)
+  const lipsync = videoModelPresentation('minimax_h3_lipsync', { template: 'lipsync', requestFormat: 'json', minImages: 1, maxImages: 9 })
+  assert.match(lipsync.description, /1–9 张参考图和 1 段音频/)
+  assert.match(videoModelPresentation('minimax_h3_t2v', { template: 'text', requestFormat: 'json' }).description, /仅需提示词/)
+  assert.equal(videoModelPresentation('custom-model').label, 'custom-model')
+  assert.equal(videoModelPresentation('custom-model').description, undefined)
+})

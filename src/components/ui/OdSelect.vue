@@ -19,7 +19,7 @@ import AppIcon from '../AppIcon.vue'
 
 const props = withDefaults(
   defineProps<{
-    options: Array<{ value: string; label: string }>
+    options: Array<{ value: string; label: string; description?: string }>
     placeholder?: string
     disabled?: boolean
     compact?: boolean
@@ -46,6 +46,7 @@ const inner = computed({
 const mappedOptions = computed(() =>
   props.options.map((o) => ({
     label: o.label,
+    description: o.description,
     value: o.value === '' ? EMPTY : o.value,
   })),
 )
@@ -93,7 +94,15 @@ defineOptions({ inheritAttrs: false })
             :value="opt.value"
             class="od-select-item relative flex cursor-pointer items-center rounded-lg py-2 pr-8 pl-3 text-sm text-fg outline-none select-none data-[highlighted]:bg-accent-soft data-[highlighted]:text-accent-strong data-[state=checked]:font-semibold"
           >
-            <SelectItemText>{{ opt.label }}</SelectItemText>
+            <div class="min-w-0">
+              <SelectItemText>{{ opt.label }}</SelectItemText>
+              <p
+                v-if="opt.description"
+                class="mt-1 whitespace-normal break-words text-xs leading-relaxed text-muted font-normal"
+              >
+                {{ opt.description }}
+              </p>
+            </div>
             <SelectItemIndicator class="absolute right-2 inline-flex items-center text-accent-strong">
               <AppIcon
                 name="check"

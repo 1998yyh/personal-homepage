@@ -2,6 +2,7 @@
 // 不动画布——画布 NodeConfigContent 内联了同款逻辑，此处抽为可复用纯函数。
 import type { AiChannelView, ModelCapability, VideoModelConfig } from '../../types/ai-generation'
 import { toModelRef } from '../channels-api'
+import { videoModelPresentation } from '../video-model-config'
 
 export interface ModelOption {
   /** modelRef = "channelId::modelName" */
@@ -9,6 +10,7 @@ export interface ModelOption {
   value: string
   /** 展示名："渠道名 · 模型名" */
   label: string
+  description?: string
 }
 
 /** 从渠道列表按能力拉平出可选模型（只取启用中的渠道） */
@@ -21,6 +23,9 @@ export function modelOptionsFor(
     .flatMap((c) =>
       c.models
         .filter((m) => m.capability === capability)
-        .map((m) => ({ value: toModelRef(c.id, m.name), videoConfig: m.videoConfig, label: `${c.name} · ${m.name}` })),
+        .map((m) => {
+          const presentation = videoModelPresentation(m.name, capability === 'video' ? m.videoConfig : undefined)
+          return { value: toModelRef(c.id, m.name), videoConfig: m.videoConfig, label: `${c.name} · ${presentation.label}`, description: presentation.description }
+        }),
     )
 }

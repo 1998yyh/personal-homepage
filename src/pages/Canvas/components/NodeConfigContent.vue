@@ -8,7 +8,7 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import type { CanvasGenerationMode, CanvasNodeData, CanvasNodeMetadata } from '../../../types/canvas';
-import { videoRequirements } from '../../../lib/video-model-config';
+import { videoRequirements, videoModelPresentation } from '../../../lib/video-model-config';
 import { channelsApi, toModelRef } from '../../../lib/channels-api';
 import { useCanvasStore } from '../../../stores/canvas';
 import { useNodeGeneration } from '../composables/useNodeGeneration';
@@ -75,7 +75,10 @@ const modelOptions = computed(() =>
     .flatMap((c) =>
       c.models
         .filter((m) => m.capability === mode.value)
-        .map((m) => ({ value: toModelRef(c.id, m.name), videoConfig: m.videoConfig, label: `${c.name} / ${m.name}` })),
+        .map((m) => {
+          const presentation = videoModelPresentation(m.name, mode.value === 'video' ? m.videoConfig : undefined);
+          return { value: toModelRef(c.id, m.name), videoConfig: m.videoConfig, label: `${c.name} / ${presentation.label}`, description: presentation.description };
+        }),
     ),
 );
 

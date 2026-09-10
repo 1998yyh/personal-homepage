@@ -1,5 +1,21 @@
 import type { VideoModelConfig } from '../types/ai-generation'
 
+/** 素材说明始终来自当前规则；别名仅帮助辨认内置模型，不替代模型 ID。 */
+export function videoModelPresentation(name: string, config?: VideoModelConfig): { label: string; description?: string } {
+  if (!config) return { label: name }
+  const names: Record<string, string> = {
+    minimax_h3_t2v: '海螺 H3 · 文生视频',
+    minimax_h3_i2v: '海螺 H3 · 多图参考',
+    minimax_h3_15s: '海螺 H3 · 多图参考 15 秒',
+    minimax_h3_first_last: '海螺 H3 · 首尾帧',
+    minimax_h3_lipsync: '海螺 H3 · 对口型',
+    minimax_h3_lipsync_v2: '海螺 H3 · 对口型增强版',
+    minimax_h3_lipsync_15s: '海螺 H3 · 对口型 15 秒',
+    'vela-2.5': 'Vela 2.5 · 视频生成',
+  }
+  return { label: names[name] ?? name, description: `${videoRequirements(config)} · ${name}` }
+}
+
 export function videoImageLimits(config: VideoModelConfig) {
   if (config.template === 'text') return { min: 0, max: 0 }
   if (config.template === 'first_last') return { min: 2, max: 2 }
