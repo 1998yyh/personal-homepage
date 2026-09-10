@@ -59,17 +59,28 @@ export const VIDEO_SECONDS_PRIMARY = ['5', '8', '10', '15'] as const
 export const VIDEO_SECONDS = ['', '-1', '5', '8', '10', '15']
 export const VIDEO_QUALITIES = ['480p', '720p', '1080p']
 
-/** 比例芯片旁的示意小矩形（宽×高 px） */
+/** 比例示意矩形的最长边；长短边按真实比例缩进 20×20 视口。 */
+const RATIO_GLYPH = 18
+
+function parseAspect(size: string): [number, number] | null {
+  if (!size || size === 'auto') return null
+  const sep = size.includes('x') ? 'x' : size.includes(':') ? ':' : null
+  if (!sep) return null
+  const [w, h] = size.split(sep).map(Number)
+  if (!w || !h) return null
+  return [w, h]
+}
+
+/** 比例芯片旁的示意矩形（宽×高 px），适配 20×20 视口。auto 不走这里。 */
 export function ratioBox(size: string): { w: number; h: number } {
-  if (size === '9:16' || size === '3:4' || size === '1024x1536' || size === '1152x1536' || size === '1080x1920') {
-    return { w: 8, h: 12 }
+  const parsed = parseAspect(size)
+  if (!parsed) return { w: 10, h: 10 }
+  const [rw, rh] = parsed
+  const scale = RATIO_GLYPH / Math.max(rw, rh)
+  return {
+    w: Math.max(5, Math.round(rw * scale)),
+    h: Math.max(5, Math.round(rh * scale)),
   }
-  if (size === '1:1' || size === '1024x1024' || size === 'auto') return { w: 10, h: 10 }
-  if (size === '21:9') return { w: 14, h: 6 }
-  if (size === '4:3' || size === '1536x1152') return { w: 12, h: 9 }
-  if (size === '3:2' || size === '1536x1024') return { w: 12, h: 8 }
-  if (size === '2:3' || size === '1024x1536') return { w: 8, h: 12 }
-  return { w: 14, h: 8 }
 }
 
 /** 视频时长选项标签：空串=默认，-1=自动，其余=N 秒 */

@@ -40,16 +40,19 @@ const elapsed = computed(() => {
 <template>
   <div class="flex h-full min-h-0 flex-col">
     <div class="flex min-h-0 flex-1 items-center justify-center p-4">
-      <!-- 进行中 -->
+      <!-- 进行中：中性骨架 + 扫光，避免大色块占位 -->
       <div
         v-if="isPendingStatus(result.status)"
-        class="flex aspect-video w-full max-w-3xl flex-col items-center justify-center rounded-2xl bg-accent-soft"
+        class="stage-loading relative flex aspect-video w-full max-w-3xl flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-border bg-fg/[0.03]"
       >
-        <p class="animate-pulse text-sm text-accent-strong">
+        <AppIcon
+          name="image"
+          :size="120"
+          class="pointer-events-none absolute text-fg/[0.05]"
+        />
+        <div class="size-8 animate-spin rounded-full border-2 border-border border-t-accent" />
+        <p class="text-sm text-muted">
           {{ STATUS_LABEL[result.status] }}… {{ elapsed }}
-        </p>
-        <p class="mt-2 line-clamp-2 max-w-md px-6 text-center text-xs text-muted">
-          {{ result.prompt }}
         </p>
       </div>
 
@@ -166,3 +169,29 @@ const elapsed = computed(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 扫光：低对比渐变扫过骨架，reduced-motion 下退化为静态 */
+.stage-loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    color-mix(in oklch, var(--fg) 6%, transparent) 50%,
+    transparent 60%
+  );
+  animation: stage-shimmer 1.8s linear infinite;
+}
+
+@keyframes stage-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-loading::after { animation: none; }
+}
+</style>

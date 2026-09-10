@@ -107,6 +107,12 @@ function pickAsset(media: MediaFileView | null) {
         </button>
       </div>
     </div>
+    <p
+      v-if="compact && uploadError"
+      class="od-error mb-2 px-3 text-xs"
+    >
+      {{ uploadError }}
+    </p>
 
     <!-- 双来源按钮（composer 工具条自己放入口，compact 只保留缩略图） -->
     <div
@@ -145,15 +151,16 @@ function pickAsset(media: MediaFileView | null) {
       >
         {{ uploadError }}
       </p>
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/*"
-        multiple
-        class="hidden"
-        @change="onFilePick"
-      >
     </div>
+
+    <input
+      ref="fileInput"
+      type="file"
+      accept="image/*"
+      multiple
+      class="hidden"
+      @change="onFilePick"
+    >
 
     <!-- 素材库选取弹层 -->
     <div

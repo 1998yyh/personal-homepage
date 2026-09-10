@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 生成台 prompt 条：空态居中 / 有选中时沉底。
 // 生成钮放底栏右侧，不跟 textarea 并排——长 prompt 会把按钮挤到滚动条旁边。
-import { computed, ref, useTemplateRef } from 'vue'
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import OdSelect from '../../../components/ui/OdSelect.vue'
 import AppIcon from '../../../components/AppIcon.vue'
@@ -123,6 +123,26 @@ function useExample(text: string) {
   promptInput.value?.focus()
 }
 
+function syncPromptHeight() {
+  const el = promptInput.value
+  if (!el) return
+  // 长 prompt 必须把输入框撑开，否则末行会被 min-height 裁掉。
+  // 支持 field-sizing 的浏览器走 CSS；其余用 scrollHeight 兜底。
+  if (typeof CSS !== 'undefined' && CSS.supports?.('field-sizing', 'content')) return
+  el.style.height = 'auto'
+  el.style.height = `${el.scrollHeight}px`
+}
+
+watch(
+  () => [composer.value.prompt, props.docked] as const,
+  () => { void nextTick(syncPromptHeight) },
+  { immediate: true },
+)
+
+function ratioChipClass(on: boolean) {
+  return on ? 'ratio-chip is-on' : 'ratio-chip'
+}
+
 async function onDrop(e: DragEvent) {
   dragging.value = false
   if (props.capability === 'audio') return
@@ -167,14 +187,16 @@ async function onDrop(e: DragEvent) {
         ref="refPicker"
         v-model="composer.referenceMedia"
         compact
-        :class="composer.referenceMedia.length ? 'px-3 pt-3' : 'hidden'"
+        :class="composer.referenceMedia.length ? 'px-3 pt-3' : ''"
       />
 
       <textarea
         ref="promptInput"
         v-model="composer.prompt"
         class="composer-prompt"
+        rows="4"
         :placeholder="CAP_PLACEHOLDER[capability]"
+        @input="syncPromptHeight"
         @keydown="onKeydown"
       />
 
@@ -188,22 +210,33 @@ async function onDrop(e: DragEvent) {
       <div class="composer-bar">
         <div class="composer-params">
           <template v-if="capability === 'image'">
-            <div class="composer-group">
+            <div class="composer-group composer-group-ratios">
               <button
                 v-for="opt in imageSizes"
                 :key="opt.value"
                 type="button"
-                :class="chipClass(composer.imageSize === opt.value)"
+                :class="ratioChipClass(composer.imageSize === opt.value)"
                 :title="opt.hint"
+                :aria-pressed="composer.imageSize === opt.value"
                 @click="composer.imageSize = opt.value"
               >
                 <span
-                  class="inline-block rounded-[2px] border border-current opacity-70"
-                  :style="{
-                    width: `${ratioBox(opt.value).w}px`,
-                    height: `${ratioBox(opt.value).h}px`,
-                  }"
-                />
+                  class="ratio-glyph"
+                  aria-hidden="true"
+                >
+                  <span
+                    v-if="opt.value === 'auto'"
+                    class="ratio-glyph-auto"
+                  />
+                  <span
+                    v-else
+                    class="ratio-glyph-shape"
+                    :style="{
+                      width: `${ratioBox(opt.value).w}px`,
+                      height: `${ratioBox(opt.value).h}px`,
+                    }"
+                  />
+                </span>
                 {{ opt.label }}
               </button>
               <button
@@ -239,21 +272,32 @@ async function onDrop(e: DragEvent) {
                 {{ videoSecondsLabel(sec) }}
               </button>
             </div>
-            <div class="composer-group">
+            <div class="composer-group composer-group-ratios">
               <button
                 v-for="opt in videoSizes"
                 :key="opt.value"
                 type="button"
-                :class="chipClass(composer.videoSize === opt.value)"
+                :class="ratioChipClass(composer.videoSize === opt.value)"
+                :aria-pressed="composer.videoSize === opt.value"
                 @click="composer.videoSize = opt.value"
               >
                 <span
-                  class="inline-block rounded-[2px] border border-current opacity-70"
-                  :style="{
-                    width: `${ratioBox(opt.value).w}px`,
-                    height: `${ratioBox(opt.value).h}px`,
-                  }"
-                />
+                  class="ratio-glyph"
+                  aria-hidden="true"
+                >
+                  <span
+                    v-if="opt.value === 'auto'"
+                    class="ratio-glyph-auto"
+                  />
+                  <span
+                    v-else
+                    class="ratio-glyph-shape"
+                    :style="{
+                      width: `${ratioBox(opt.value).w}px`,
+                      height: `${ratioBox(opt.value).h}px`,
+                    }"
+                  />
+                </span>
                 {{ opt.label }}
               </button>
             </div>
@@ -322,32 +366,41 @@ async function onDrop(e: DragEvent) {
         </div>
 
         <div class="composer-actions">
-          <template v-if="capability !== 'audio'">
+          <div
+            v-if="capability !== 'audio'"
+            class="composer-ref-tools"
+          >
             <button
               type="button"
-              class="composer-icon-btn"
-              title="上传参考图"
-              aria-label="上传参考图"
+              class="composer-tool-btn"
+              title="从本地上传参考图"
+              :disabled="refPicker?.uploading"
               @click="refPicker?.pickFile()"
             >
               <AppIcon
                 name="upload"
                 :size="14"
               />
+              {{ refPicker?.uploading ? '上传中' : '上传' }}
             </button>
             <button
               type="button"
-              class="composer-icon-btn"
-              title="从素材库选参考图"
-              aria-label="从素材库选参考图"
+              class="composer-tool-btn"
+              :class="{ 'is-on': composer.referenceMedia.length > 0 }"
+              title="从素材库选择参考图"
               @click="refPicker?.openLibrary()"
             >
               <AppIcon
                 name="grid"
                 :size="14"
               />
+              素材库
+              <span
+                v-if="composer.referenceMedia.length"
+                class="composer-tool-count"
+              >{{ composer.referenceMedia.length }}</span>
             </button>
-          </template>
+          </div>
           <div class="composer-model">
             <OdSelect
               v-model="composer.modelRef"
@@ -457,11 +510,14 @@ async function onDrop(e: DragEvent) {
 .composer-prompt {
   display: block;
   width: 100%;
-  min-height: 5.5rem;
-  max-height: 13rem;
+  box-sizing: border-box;
+  field-sizing: content;
+  min-height: 8.75rem;
+  max-height: 18rem;
   resize: none;
   overflow-y: auto;
-  padding: 14px 16px 10px;
+  overflow-wrap: break-word;
+  padding: 14px 16px;
   background: transparent;
   font-size: 14px;
   line-height: 1.65;
@@ -470,9 +526,9 @@ async function onDrop(e: DragEvent) {
   scrollbar-width: thin;
 }
 .composer.is-docked .composer-prompt {
-  min-height: 3.5rem;
-  max-height: 8.5rem;
-  padding: 10px 14px 8px;
+  min-height: 5.5rem;
+  max-height: 12rem;
+  padding: 12px 14px;
 }
 .composer-prompt::placeholder {
   color: var(--muted);
@@ -502,6 +558,17 @@ async function onDrop(e: DragEvent) {
   align-items: center;
   gap: 2px;
 }
+/* 比例 chips 强制一行：空间不够时横向滚动，不换行 */
+.composer-group-ratios {
+  flex-wrap: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.composer-group-ratios::-webkit-scrollbar {
+  display: none;
+}
 .composer-actions {
   display: flex;
   align-items: center;
@@ -511,20 +578,98 @@ async function onDrop(e: DragEvent) {
   padding-left: 12px;
   border-left: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
 }
-.composer-icon-btn {
+.composer-ref-tools {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
+  gap: 2px;
+  padding-right: 8px;
+  margin-right: 2px;
+  border-right: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
+}
+.composer-tool-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
   height: 28px;
+  padding: 0 8px;
   border-radius: 8px;
+  font-size: 12px;
   color: var(--muted);
+  white-space: nowrap;
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s;
 }
-.composer-icon-btn:hover {
+.composer-tool-btn:hover:not(:disabled) {
   background: color-mix(in oklch, var(--fg) 6%, transparent);
   color: var(--fg);
+}
+.composer-tool-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.composer-tool-btn.is-on {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.composer-tool-count {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--accent) 18%, transparent);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 16px;
+  text-align: center;
+}
+.ratio-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px 0 6px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.ratio-chip:hover {
+  background: color-mix(in oklch, var(--fg) 5%, transparent);
+  color: var(--fg);
+}
+.ratio-chip.is-on {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.ratio-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.ratio-glyph-shape {
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  background: color-mix(in oklch, currentColor 22%, transparent);
+}
+.ratio-chip.is-on .ratio-glyph-shape {
+  background: color-mix(in oklch, currentColor 50%, transparent);
+}
+.ratio-glyph-auto {
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 1.75px dashed currentColor;
+  border-radius: 4px;
+  opacity: 0.9;
 }
 .composer-model {
   width: 10.5rem;
@@ -573,7 +718,8 @@ async function onDrop(e: DragEvent) {
 }
 @media (prefers-reduced-motion: reduce) {
   .composer-card,
-  .composer-icon-btn,
+  .composer-tool-btn,
+  .ratio-chip,
   .composer-example {
     transition: none;
   }
