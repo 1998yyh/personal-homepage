@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import type { AiChannelView, ChannelModel, ChannelPayload, ModelCapability } from '../../../types/ai-generation'
 import { ApiFormat } from '../../../types/ai-generation'
 import AppIcon from '../../../components/AppIcon.vue'
+import OdSelect from '../../../components/ui/OdSelect.vue'
 
 const props = defineProps<{
   /** 传入则为编辑模式，否则为创建 */
@@ -26,11 +27,17 @@ const API_FORMAT_OPTIONS: Array<{ value: (typeof ApiFormat)[keyof typeof ApiForm
 ]
 
 const CAPABILITY_OPTIONS: Array<{ value: ModelCapability; label: string }> = [
-  { value: 'chat', label: '对话' },
-  { value: 'image', label: '图片' },
   { value: 'video', label: '视频' },
+  { value: 'image', label: '图片' },
+  { value: 'chat', label: '对话' },
   { value: 'audio', label: '音频' },
 ]
+
+/** 表单按模型名合并用途；提交时再拆成后端的「一条记录一个用途」 */
+interface FormModel {
+  name: string
+  capabilities: ModelCapability[]
+}
 
 const BASE_URL_PLACEHOLDERS: Record<string, string> = {
   openai: '如 https://api.openai.com',
@@ -45,7 +52,7 @@ const form = reactive({
   baseUrl: '',
   apiKey: '',
   isActive: true,
-  models: [] as ChannelModel[],
+  models: [] as FormModel[],
 })
 
 const showApiKey = ref(false)
@@ -60,13 +67,35 @@ watch(
     form.baseUrl = channel.baseUrl
     form.apiKey = ''
     form.isActive = channel.isActive
-    form.models = channel.models.map((m) => ({ name: m.name, capability: m.capability }))
+    form.models = mergeModels(channel.models)
   },
   { immediate: true },
 )
 
+/** 同名模型的多条单用途记录合并成一行多选 */
+function mergeModels(models: ChannelModel[]): FormModel[] {
+  const rows: FormModel[] = []
+  const indexByName = new Map<string, number>()
+  for (const m of models) {
+    const i = indexByName.get(m.name)
+    if (i == null) {
+      indexByName.set(m.name, rows.length)
+      rows.push({ name: m.name, capabilities: [m.capability] })
+    } else if (!rows[i].capabilities.includes(m.capability)) {
+      rows[i].capabilities.push(m.capability)
+    }
+  }
+  return rows
+}
+
 const addModel = () => {
-  form.models.push({ name: '', capability: 'image' })
+  form.models.push({ name: '', capabilities: ['image'] })
+}
+
+const toggleCapability = (model: FormModel, cap: ModelCapability) => {
+  const i = model.capabilities.indexOf(cap)
+  if (i >= 0) model.capabilities.splice(i, 1)
+  else model.capabilities.push(cap)
 }
 
 const removeModel = (index: number) => {
@@ -87,9 +116,27 @@ const handleSubmit = () => {
     localError.value = '请填写 API Key'
     return
   }
-  const models = form.models
-    .map((m) => ({ name: m.name.trim(), capability: m.capability }))
-    .filter((m) => m.name)
+  const models: ChannelModel[] = []
+  const seen = new Map<string, Set<ModelCapability>>()
+  for (const row of form.models) {
+    const name = row.name.trim()
+    if (!name) continue
+    if (!row.capabilities.length) {
+      localError.value = `「${name}」请至少选择一种用途`
+      return
+    }
+    let caps = seen.get(name)
+    if (!caps) {
+      caps = new Set()
+      seen.set(name, caps)
+    }
+    for (const cap of row.capabilities) caps.add(cap)
+  }
+  for (const [name, caps] of seen) {
+    for (const opt of CAPABILITY_OPTIONS) {
+      if (caps.has(opt.value)) models.push({ name, capability: opt.value })
+    }
+  }
   if (!models.length) {
     localError.value = '至少配置一个模型'
     return
@@ -153,18 +200,10 @@ const handleSubmit = () => {
 
       <div>
         <label class="od-label">API 格式 *</label>
-        <select
+        <OdSelect
           v-model="form.apiFormat"
-          class="od-input"
-        >
-          <option
-            v-for="opt in API_FORMAT_OPTIONS"
-            :key="opt.value"
-            :value="opt.value"
-          >
-            {{ opt.label }}
-          </option>
-        </select>
+          :options="API_FORMAT_OPTIONS"
+        />
         <p class="text-muted text-xs mt-1.5">
           {{ API_FORMAT_OPTIONS.find((o) => o.value === form.apiFormat)?.hint }}
         </p>
@@ -228,41 +267,49 @@ const handleSubmit = () => {
             添加模型
           </button>
         </div>
+        <p class="text-muted text-xs mb-2">
+          同一模型可勾选多种用途，例如既生图又生视频
+        </p>
         <div class="flex flex-col gap-2">
           <div
             v-for="(model, index) in form.models"
             :key="index"
-            class="flex items-center gap-2"
+            class="flex flex-col gap-2 p-3 rounded-xl border border-border"
           >
-            <input
-              v-model="model.name"
-              class="od-input flex-1"
-              autocomplete="off"
-              placeholder="模型名，如 gpt-image-2"
-            >
-            <select
-              v-model="model.capability"
-              class="od-input !w-24 shrink-0"
-            >
-              <option
+            <div class="flex items-center gap-2">
+              <input
+                v-model="model.name"
+                class="od-input flex-1"
+                autocomplete="off"
+                placeholder="模型名，如 MiniMax-H3"
+              >
+              <button
+                type="button"
+                class="od-icon-btn !w-9 !h-9 shrink-0 hover:!text-danger hover:!border-danger/40"
+                title="移除"
+                @click="removeModel(index)"
+              >
+                <AppIcon
+                  name="trash-2"
+                  :size="15"
+                />
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button
                 v-for="opt in CAPABILITY_OPTIONS"
                 :key="opt.value"
-                :value="opt.value"
+                type="button"
+                class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
+                :class="model.capabilities.includes(opt.value)
+                  ? 'bg-accent-soft text-accent-strong'
+                  : 'bg-fg/5 text-muted hover:bg-fg/10'"
+                :aria-pressed="model.capabilities.includes(opt.value)"
+                @click="toggleCapability(model, opt.value)"
               >
                 {{ opt.label }}
-              </option>
-            </select>
-            <button
-              type="button"
-              class="od-icon-btn !w-9 !h-9 shrink-0 hover:!text-danger hover:!border-danger/40"
-              title="移除"
-              @click="removeModel(index)"
-            >
-              <AppIcon
-                name="trash-2"
-                :size="15"
-              />
-            </button>
+              </button>
+            </div>
           </div>
           <p
             v-if="!form.models.length"
