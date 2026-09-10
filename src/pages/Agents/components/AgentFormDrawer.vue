@@ -5,6 +5,7 @@ import type { Agent, AgentPayload, BuiltinToolName } from '../../../types/agent'
 import { BUILTIN_TOOL_LABELS } from '../../../types/agent'
 import { channelsApi } from '../../../lib/channels-api'
 import AppIcon from '../../../components/AppIcon.vue'
+import OdSelect from '../../../components/ui/OdSelect.vue'
 
 const props = defineProps<{
   /** 传入则为编辑模式，否则为创建 */
@@ -68,6 +69,25 @@ const missingChannel = computed(
     form.channelId &&
     !chatChannels.value.some((c) => c.id === form.channelId),
 )
+
+const channelSelectOptions = computed(() => {
+  const opts = chatChannels.value.map((c) => ({ value: c.id, label: c.name }))
+  if (missingChannel.value) {
+    opts.push({
+      value: form.channelId,
+      label: `${props.agent?.channelName ?? '原渠道'}（已停用或删除）`,
+    })
+  }
+  return opts
+})
+
+const modelSelectOptions = computed(() => {
+  const opts = chatModels.value.map((m) => ({ value: m.name, label: m.name }))
+  if (isEdit.value && form.modelName && !chatModels.value.some((m) => m.name === form.modelName)) {
+    opts.push({ value: form.modelName, label: `${form.modelName}（已不在渠道中）` })
+  }
+  return opts
+})
 
 // 编辑模式回填（连接信息来自渠道引用，不回填任何凭据）
 watch(
@@ -200,60 +220,20 @@ const handleSubmit = () => {
         <div class="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
           <div>
             <label class="od-label">渠道 *</label>
-            <select
+            <OdSelect
               v-model="form.channelId"
-              class="od-input"
-            >
-              <option
-                value=""
-                disabled
-              >
-                选择渠道
-              </option>
-              <option
-                v-for="c in chatChannels"
-                :key="c.id"
-                :value="c.id"
-              >
-                {{ c.name }}
-              </option>
-              <!-- 编辑时原渠道已停用/删除的兜底项 -->
-              <option
-                v-if="missingChannel"
-                :value="form.channelId"
-              >
-                {{ agent?.channelName ?? '原渠道' }}（已停用或删除）
-              </option>
-            </select>
+              placeholder="选择渠道"
+              :options="channelSelectOptions"
+            />
           </div>
           <div>
             <label class="od-label">对话模型 *</label>
-            <select
+            <OdSelect
               v-model="form.modelName"
-              class="od-input"
               :disabled="!form.channelId"
-            >
-              <option
-                value=""
-                disabled
-              >
-                {{ form.channelId ? '选择模型' : '先选择渠道' }}
-              </option>
-              <option
-                v-for="m in chatModels"
-                :key="m.name"
-                :value="m.name"
-              >
-                {{ m.name }}
-              </option>
-              <!-- 编辑时原模型已被移出渠道的兜底项 -->
-              <option
-                v-if="isEdit && form.modelName && !chatModels.some((m) => m.name === form.modelName)"
-                :value="form.modelName"
-              >
-                {{ form.modelName }}（已不在渠道中）
-              </option>
-            </select>
+              :placeholder="form.channelId ? '选择模型' : '先选择渠道'"
+              :options="modelSelectOptions"
+            />
           </div>
         </div>
         <p class="text-muted text-xs -mt-2">

@@ -12,6 +12,7 @@ import { channelsApi, toModelRef } from '../../../lib/channels-api';
 import { useCanvasStore } from '../../../stores/canvas';
 import { useNodeGeneration } from '../composables/useNodeGeneration';
 import AppIcon from '../../../components/AppIcon.vue';
+import OdSelect from '../../../components/ui/OdSelect.vue';
 
 const props = defineProps<{ node: CanvasNodeData }>();
 
@@ -25,14 +26,26 @@ const MODE_OPTIONS: Array<{ value: CanvasGenerationMode; label: string }> = [
   { value: 'audio', label: '音频' },
 ];
 
-const IMAGE_SIZES = ['auto', '1024x1024', '1536x1024', '1024x1536'];
-const IMAGE_QUALITIES = ['low', 'medium', 'high'];
+const IMAGE_SIZE_OPTIONS = [
+  { value: 'auto', label: '自动' },
+  { value: '1024x1024', label: '1024x1024' },
+  { value: '1536x1024', label: '1536x1024' },
+  { value: '1024x1536', label: '1024x1536' },
+];
+const IMAGE_QUALITY_OPTIONS = [
+  { value: 'low', label: 'low' },
+  { value: 'medium', label: 'medium' },
+  { value: 'high', label: 'high' },
+];
 const IMAGE_BACKGROUNDS = [
   { value: '', label: '默认' },
   { value: 'transparent', label: '透明' },
   { value: 'opaque', label: '不透明' },
 ];
-const VIDEO_SIZES = ['auto', '16:9', '9:16', '1:1', '4:3', '3:4', '21:9'];
+const VIDEO_SIZE_OPTIONS = ['auto', '16:9', '9:16', '1:1', '4:3', '3:4', '21:9'].map((s) => ({
+  value: s,
+  label: s === 'auto' ? '自动' : s,
+}));
 const VIDEO_SECONDS = [
   { value: '', label: '默认' },
   { value: '-1', label: '自动' },
@@ -41,9 +54,10 @@ const VIDEO_SECONDS = [
   { value: '10', label: '10 秒' },
   { value: '15', label: '15 秒' },
 ];
-const VIDEO_QUALITIES = ['480p', '720p', '1080p'];
-const AUDIO_VOICES = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer', 'verse', 'marin', 'cedar'];
-const AUDIO_FORMATS = ['mp3', 'wav', 'opus', 'aac', 'flac', 'pcm'];
+const VIDEO_QUALITY_OPTIONS = ['480p', '720p', '1080p'].map((q) => ({ value: q, label: q }));
+const AUDIO_VOICE_OPTIONS = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer', 'verse', 'marin', 'cedar'].map((v) => ({ value: v, label: v }));
+const AUDIO_FORMAT_OPTIONS = ['mp3', 'wav', 'opus', 'aac', 'flac', 'pcm'].map((f) => ({ value: f, label: f }));
+const COUNT_OPTIONS = [1, 2, 3, 4].map((n) => ({ value: String(n), label: `${n} 张` }));
 
 const meta = computed(() => props.node.metadata || {});
 const mode = computed<CanvasGenerationMode>(() => meta.value.generationMode || 'image');
@@ -199,22 +213,12 @@ function handleGenerate() {
 
           <div>
             <label class="od-label">模型</label>
-            <select
-              class="od-input"
-              :value="meta.model || ''"
-              @change="patch({ model: ($event.target as HTMLSelectElement).value || undefined })"
-            >
-              <option value="">
-                请选择模型
-              </option>
-              <option
-                v-for="opt in modelOptions"
-                :key="opt.value"
-                :value="opt.value"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
+            <OdSelect
+              :model-value="meta.model"
+              placeholder="请选择模型"
+              :options="modelOptions"
+              @update:model-value="(v) => patch({ model: v || undefined })"
+            />
             <p
               v-if="!modelOptions.length"
               class="text-muted text-xs mt-1.5"
@@ -228,69 +232,37 @@ function handleGenerate() {
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="od-label">尺寸</label>
-                <select
-                  class="od-input"
-                  :value="meta.size || 'auto'"
-                  @change="patch({ size: ($event.target as HTMLSelectElement).value })"
-                >
-                  <option
-                    v-for="s in IMAGE_SIZES"
-                    :key="s"
-                    :value="s"
-                  >
-                    {{ s === 'auto' ? '自动' : s }}
-                  </option>
-                </select>
+                <OdSelect
+                  :model-value="meta.size || 'auto'"
+                  :options="IMAGE_SIZE_OPTIONS"
+                  @update:model-value="(v) => patch({ size: v })"
+                />
               </div>
               <div>
                 <label class="od-label">质量</label>
-                <select
-                  class="od-input"
-                  :value="meta.quality || 'medium'"
-                  @change="patch({ quality: ($event.target as HTMLSelectElement).value })"
-                >
-                  <option
-                    v-for="q in IMAGE_QUALITIES"
-                    :key="q"
-                    :value="q"
-                  >
-                    {{ q }}
-                  </option>
-                </select>
+                <OdSelect
+                  :model-value="meta.quality || 'medium'"
+                  :options="IMAGE_QUALITY_OPTIONS"
+                  @update:model-value="(v) => patch({ quality: v })"
+                />
               </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="od-label">背景</label>
-                <select
-                  class="od-input"
-                  :value="meta.background || ''"
-                  @change="patch({ background: ($event.target as HTMLSelectElement).value || undefined })"
-                >
-                  <option
-                    v-for="b in IMAGE_BACKGROUNDS"
-                    :key="b.value"
-                    :value="b.value"
-                  >
-                    {{ b.label }}
-                  </option>
-                </select>
+                <OdSelect
+                  :model-value="meta.background ?? ''"
+                  :options="IMAGE_BACKGROUNDS"
+                  @update:model-value="(v) => patch({ background: v || undefined })"
+                />
               </div>
               <div>
                 <label class="od-label">数量</label>
-                <select
-                  class="od-input"
-                  :value="String(meta.count || 1)"
-                  @change="patch({ count: Number(($event.target as HTMLSelectElement).value) })"
-                >
-                  <option
-                    v-for="n in [1, 2, 3, 4]"
-                    :key="n"
-                    :value="String(n)"
-                  >
-                    {{ n }} 张
-                  </option>
-                </select>
+                <OdSelect
+                  :model-value="String(meta.count || 1)"
+                  :options="COUNT_OPTIONS"
+                  @update:model-value="(v) => patch({ count: Number(v) })"
+                />
               </div>
             </div>
           </template>
@@ -300,52 +272,28 @@ function handleGenerate() {
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="od-label">时长</label>
-                <select
-                  class="od-input"
-                  :value="meta.seconds || ''"
-                  @change="patch({ seconds: ($event.target as HTMLSelectElement).value || undefined })"
-                >
-                  <option
-                    v-for="s in VIDEO_SECONDS"
-                    :key="s.value"
-                    :value="s.value"
-                  >
-                    {{ s.label }}
-                  </option>
-                </select>
+                <OdSelect
+                  :model-value="meta.seconds ?? ''"
+                  :options="VIDEO_SECONDS"
+                  @update:model-value="(v) => patch({ seconds: v || undefined })"
+                />
               </div>
               <div>
                 <label class="od-label">比例</label>
-                <select
-                  class="od-input"
-                  :value="meta.size || 'auto'"
-                  @change="patch({ size: ($event.target as HTMLSelectElement).value })"
-                >
-                  <option
-                    v-for="s in VIDEO_SIZES"
-                    :key="s"
-                    :value="s"
-                  >
-                    {{ s === 'auto' ? '自动' : s }}
-                  </option>
-                </select>
+                <OdSelect
+                  :model-value="meta.size || 'auto'"
+                  :options="VIDEO_SIZE_OPTIONS"
+                  @update:model-value="(v) => patch({ size: v })"
+                />
               </div>
             </div>
             <div>
               <label class="od-label">清晰度</label>
-              <select
-                class="od-input"
-                :value="meta.vquality || '720p'"
-                @change="patch({ vquality: ($event.target as HTMLSelectElement).value })"
-              >
-                <option
-                  v-for="q in VIDEO_QUALITIES"
-                  :key="q"
-                  :value="q"
-                >
-                  {{ q }}
-                </option>
-              </select>
+              <OdSelect
+                :model-value="meta.vquality || '720p'"
+                :options="VIDEO_QUALITY_OPTIONS"
+                @update:model-value="(v) => patch({ vquality: v })"
+              />
             </div>
             <label class="flex items-center gap-3 cursor-pointer">
               <input
@@ -372,35 +320,19 @@ function handleGenerate() {
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="od-label">音色</label>
-                <select
-                  class="od-input"
-                  :value="meta.audioVoice || 'alloy'"
-                  @change="patch({ audioVoice: ($event.target as HTMLSelectElement).value })"
-                >
-                  <option
-                    v-for="v in AUDIO_VOICES"
-                    :key="v"
-                    :value="v"
-                  >
-                    {{ v }}
-                  </option>
-                </select>
+                <OdSelect
+                  :model-value="meta.audioVoice || 'alloy'"
+                  :options="AUDIO_VOICE_OPTIONS"
+                  @update:model-value="(v) => patch({ audioVoice: v })"
+                />
               </div>
               <div>
                 <label class="od-label">格式</label>
-                <select
-                  class="od-input"
-                  :value="meta.audioFormat || 'mp3'"
-                  @change="patch({ audioFormat: ($event.target as HTMLSelectElement).value })"
-                >
-                  <option
-                    v-for="f in AUDIO_FORMATS"
-                    :key="f"
-                    :value="f"
-                  >
-                    {{ f }}
-                  </option>
-                </select>
+                <OdSelect
+                  :model-value="meta.audioFormat || 'mp3'"
+                  :options="AUDIO_FORMAT_OPTIONS"
+                  @update:model-value="(v) => patch({ audioFormat: v })"
+                />
               </div>
             </div>
             <div>

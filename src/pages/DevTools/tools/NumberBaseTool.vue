@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import OdSelect from '../../../components/ui/OdSelect.vue'
+
+const BASE_OPTIONS = [
+  { value: '2', label: '二进制' },
+  { value: '8', label: '八进制' },
+  { value: '10', label: '十进制' },
+  { value: '16', label: '十六进制' },
+]
 
 const input = ref('255')
-const base = ref(10)
+const base = ref('10')
 const results = ref<Record<string, string>>({})
 
 const convert = () => {
-  const num = parseInt(input.value, base.value)
+  const num = parseInt(input.value, Number(base.value))
   if (isNaN(num)) {
     results.value = {}
     return
@@ -23,23 +31,12 @@ const convert = () => {
 <template>
   <div class="space-y-6">
     <div class="flex gap-4">
-      <select
-        v-model.number="base"
-        class="od-input !w-auto"
-      >
-        <option :value="2">
-          二进制
-        </option>
-        <option :value="8">
-          八进制
-        </option>
-        <option :value="10">
-          十进制
-        </option>
-        <option :value="16">
-          十六进制
-        </option>
-      </select>
+      <div class="w-32 shrink-0">
+        <OdSelect
+          v-model="base"
+          :options="BASE_OPTIONS"
+        />
+      </div>
       <input
         v-model="input"
         type="text"
