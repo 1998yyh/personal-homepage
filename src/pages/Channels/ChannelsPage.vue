@@ -6,7 +6,6 @@ import { channelsApi } from '../../lib/channels-api'
 import type { AiChannelView, ChannelPayload } from '../../types/ai-generation'
 import { ApiFormat, ModelCapability } from '../../types/ai-generation'
 import { useAuthStore } from '../../stores/auth'
-import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal.vue'
@@ -144,9 +143,7 @@ const openDelete = (channel: AiChannelView) => {
 </script>
 
 <template>
-  <div class="min-h-screen max-w-[100vw] overflow-x-hidden">
-    <Navbar />
-
+  <div class="page-root max-w-full overflow-x-hidden">
     <main class="max-w-[1280px] mx-auto px-4 sm:px-6 py-10 min-w-0">
       <div class="flex items-end justify-between gap-4 flex-wrap mb-7">
         <div>

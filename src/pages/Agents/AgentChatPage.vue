@@ -7,8 +7,8 @@ import type { Conversation } from '../../types/agent'
 import { useAgentStream } from '../../composables/useAgentStream'
 import type { TurnMetrics } from '../../composables/useAgentStream'
 import { groupMessages } from './utils/groupMessages'
-import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import { useLaunchStore } from '../../stores/launch'
 import ConversationList from './components/ConversationList.vue'
 import MessageBubble from './components/MessageBubble.vue'
 import BackgroundTasksPill from './components/BackgroundTasksPill.vue'
@@ -19,6 +19,9 @@ import type { SlashCommand } from './components/SlashCommandMenu.vue'
 const route = useRoute()
 const router = useRouter()
 const queryClient = useQueryClient()
+const launch = useLaunchStore()
+const incomingPrompt = launch.takeChatPrompt()
+const conversationMenuOpen = ref(false)
 
 // 响应式取路由参数：同组件实例内 /agents/a → /agents/b 直接切换时 queryKey/请求随动
 const agentId = computed(() => String(route.params.id || ''))
@@ -49,7 +52,8 @@ const conversations = computed(() => convData.value?.pages.flatMap((p) => p.item
 
 // ---- 会话选中：null = 未选；草稿态由 isDraft 标记 ----
 const selectedId = ref<string | null>(null)
-const isDraft = ref(false)
+// 首页携带内容时直接进入草稿态，历史请求返回也不能覆盖这份输入。
+const isDraft = ref(Boolean(incomingPrompt))
 
 // 列表加载后：优先按 ?c= 定位，无则自动选最近一个（immediate 必须——CLAUDE.md 规范）。
 // 草稿态（用户已点「新对话」）不覆盖：避免占位项与真实选中并存
@@ -69,6 +73,7 @@ watch(selectedId, (id) => {
 })
 
 const selectConversation = (id: string) => {
+  conversationMenuOpen.value = false
   stream.abort() // 断流 + 清停止残影（无条件，abort 内部已幂等）
   isDraft.value = false
   selectedId.value = id
@@ -79,6 +84,7 @@ const selectConversation = (id: string) => {
 
 // ---- 新建会话：懒创建，首条消息发出时才 POST（设计文档 §7） ----
 const startDraft = () => {
+  conversationMenuOpen.value = false
   stream.abort() // 同上：断流 + 清停止残影
   selectedId.value = null
   isDraft.value = true
@@ -167,7 +173,7 @@ const formatMmSs = (ms: number) => {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
 }
 
-const input = ref('')
+const input = ref(incomingPrompt)
 const inputEl = ref<HTMLTextAreaElement | null>(null)
 const messagesEl = ref<HTMLElement | null>(null)
 /** 建会话等发送前置步骤的错误（流内错误走 stream.errorMessage） */
@@ -414,13 +420,24 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <Navbar />
-
+  <div class="page-root">
     <!-- chat-shell：左栏会话列表 + 右栏聊天窗口（对齐 design/agent-chat.html） -->
-    <main class="h-[calc(100vh-64px)] grid grid-cols-[272px_1fr] max-md:grid-cols-[220px_1fr]">
+    <main
+      class="chat-workspace"
+      @keydown.esc="conversationMenuOpen = false"
+    >
+      <button
+        v-if="conversationMenuOpen"
+        class="chat-list-backdrop"
+        aria-label="关闭会话列表"
+        @click="conversationMenuOpen = false"
+      />
       <!-- 左栏 -->
-      <aside class="bg-surface border-r border-border flex flex-col min-h-0">
+      <aside
+        id="chat-conversations"
+        class="chat-conversations bg-surface border-r border-border flex flex-col min-h-0"
+        :class="{ expanded: conversationMenuOpen }"
+      >
         <ConversationList
           :conversations="conversations"
           :selected-id="selectedId"
@@ -436,10 +453,22 @@ onBeforeUnmount(() => {
       </aside>
 
       <!-- 右栏 -->
-      <section class="flex flex-col min-h-0">
+      <section class="flex flex-col min-h-0 min-w-0">
         <!-- 头部 -->
         <header class="bg-surface border-b border-border px-5 py-3 flex items-center gap-3 shrink-0">
-          <div class="w-9 h-9 rounded-[10px] bg-accent text-white grid place-items-center shrink-0">
+          <button
+            class="od-icon-btn chat-list-toggle"
+            aria-label="打开会话列表"
+            aria-controls="chat-conversations"
+            :aria-expanded="conversationMenuOpen"
+            @click="conversationMenuOpen = !conversationMenuOpen"
+          >
+            <AppIcon
+              name="message-square"
+              :size="17"
+            />
+          </button>
+          <div class="w-9 h-9 rounded-[10px] bg-accent text-on-accent grid place-items-center shrink-0">
             <AppIcon
               name="bot"
               :size="18"
@@ -479,7 +508,7 @@ onBeforeUnmount(() => {
                 v-if="(isDraft || !activeConvId) && !pendingUserMessage && !stream.streamingMessage.value"
                 class="flex-1 flex flex-col items-center justify-center text-center"
               >
-                <div class="w-14 h-14 rounded-2xl bg-accent text-white grid place-items-center mb-4">
+                <div class="w-14 h-14 rounded-2xl bg-accent text-on-accent grid place-items-center mb-4">
                   <AppIcon
                     name="bot"
                     :size="26"
@@ -678,7 +707,7 @@ onBeforeUnmount(() => {
                   </button>
                   <button
                     v-else
-                    class="ml-auto w-[34px] h-[34px] rounded-full bg-accent text-white grid place-items-center transition hover:-translate-y-px disabled:opacity-45 disabled:pointer-events-none"
+                    class="ml-auto w-[34px] h-[34px] rounded-full bg-accent text-on-accent grid place-items-center transition hover:-translate-y-px disabled:opacity-45 disabled:pointer-events-none"
                     title="发送"
                     :disabled="!input.trim() || agentDisabled || (!activeConvId && !isDraft)"
                     @click="sendMessage"
@@ -734,3 +763,8 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.chat-workspace{height:calc(100dvh - 64px);display:grid;grid-template-columns:250px minmax(0,1fr);position:relative;overflow:hidden}.chat-list-toggle,.chat-list-backdrop{display:none}
+@media(max-width:700px){.chat-workspace{grid-template-columns:minmax(0,1fr)}.chat-conversations{display:none;position:absolute;z-index:12;inset:0 auto 0 0;width:min(280px,85vw)}.chat-conversations.expanded{display:flex}.chat-list-toggle{display:grid;flex-shrink:0}.chat-list-backdrop{display:block;position:absolute;inset:0;background:#0006;z-index:11}.chat-workspace>section>header{padding:10px 12px;gap:8px}}
+</style>

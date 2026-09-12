@@ -602,10 +602,13 @@ async function onDrop(e: DragEvent) {
 }
 .composer-actions {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 6px;
   margin-left: auto;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   padding-left: 12px;
   border-left: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
 }
@@ -704,9 +707,11 @@ async function onDrop(e: DragEvent) {
 }
 .composer-model {
   width: 10.5rem;
-  flex-shrink: 0;
+  min-width: 130px;
+  flex: 1 1 140px;
 }
 .composer-go {
+  flex-shrink: 0;
   height: 38px;
   padding: 0 18px;
   border-radius: 10px;
@@ -746,6 +751,9 @@ async function onDrop(e: DragEvent) {
   background: var(--accent-soft);
   border-color: color-mix(in oklch, var(--accent) 35%, var(--border));
   color: var(--accent-strong);
+}
+@media(max-width:600px){
+  .composer-actions{width:100%;padding-left:0;border-left:0;gap:8px}.composer-ref-tools{border:0}.composer-model{min-width:130px}.composer-go{margin-left:auto;min-height:42px}.composer-prompt{font-size:16px}
 }
 @media (prefers-reduced-motion: reduce) {
   .composer-card,

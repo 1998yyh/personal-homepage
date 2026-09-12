@@ -120,7 +120,7 @@ function onPreview() {
 function onPickPrompt(text: string) {
   store.session(cap.value).composer.prompt = text
   // 窄屏选完即收浮层，露出已填好的输入框；宽屏侧栏保持开着方便连选。
-  if (window.matchMedia('(max-width: 767px)').matches) libraryOpen.value = false
+  if (window.matchMedia('(max-width: 1279px)').matches) libraryOpen.value = false
 }
 
 // 词库只有图片源：视频 / 音频台不挂侧栏，避免占宽还填进不匹配的提示词。
@@ -170,7 +170,7 @@ const libraryVisible = computed(() => cap.value === 'image' && libraryOpen.value
     <button
       v-show="libraryVisible"
       type="button"
-      class="prompt-rail-backdrop md:hidden"
+      class="prompt-rail-backdrop xl:hidden"
       aria-label="关闭词库"
       @click="libraryOpen = false"
     />
@@ -213,7 +213,7 @@ const libraryVisible = computed(() => cap.value === 'image' && libraryOpen.value
   background: var(--bg);
   border-left: 1px solid var(--border);
 }
-@media (max-width: 767px) {
+@media (max-width: 1279px) {
   .prompt-rail {
     display: flex;
     position: fixed;
@@ -234,7 +234,7 @@ const libraryVisible = computed(() => cap.value === 'image' && libraryOpen.value
     pointer-events: auto;
   }
 }
-@media (min-width: 768px) {
+@media (min-width: 1280px) {
   .prompt-rail.is-open {
     display: flex;
     /* 三列封面卡：12px 边距 + 8px 间隙，单卡约 126px。 */

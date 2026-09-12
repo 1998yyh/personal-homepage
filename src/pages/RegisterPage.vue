@@ -154,7 +154,7 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <AuthShell lede="注册一个账户，把每日情报、市场复盘和趁手工具收进同一个工作空间。">
+  <AuthShell lede="创建你的 AI 工作空间，收集灵感、展开对话、记录每一次创作。">
     <div class="auth-logo anim-rise d1">
       <h1>创建账户</h1>
       <p>开始你的探索之旅</p>

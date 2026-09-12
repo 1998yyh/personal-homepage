@@ -719,8 +719,8 @@ async function handleExportSelected() {
             top: `${Math.min(selectionBox.startWorldY, selectionBox.currentWorldY)}px`,
             width: `${Math.abs(selectionBox.currentWorldX - selectionBox.startWorldX)}px`,
             height: `${Math.abs(selectionBox.currentWorldY - selectionBox.startWorldY)}px`,
-            borderColor: '#2f80ff',
-            background: '#2f80ff14',
+            borderColor: 'var(--accent)',
+            background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
           }"
         />
 

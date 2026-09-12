@@ -4,11 +4,12 @@ import { useRouter } from 'vue-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import agentsApi from '../../lib/agents-api'
 import { BUILTIN_TOOL_LABELS, type Agent, type AgentPayload, type BuiltinToolName } from '../../types/agent'
-import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import { useLaunchStore } from '../../stores/launch'
 import AgentFormDrawer from './components/AgentFormDrawer.vue'
 
 const router = useRouter()
+const launch = useLaunchStore()
 const queryClient = useQueryClient()
 
 const { data, isLoading } = useQuery({
@@ -67,10 +68,18 @@ const openDelete = (agent: Agent) => {
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <Navbar />
-
+  <div class="page-root">
     <main class="max-w-[1280px] mx-auto px-6 py-10">
+      <div
+        v-if="launch.chatPrompt"
+        class="od-panel p-4 mb-6 text-sm"
+      >
+        <p class="text-accent-strong mb-2">
+          已带入你的想法，选择一位助手继续
+        </p><p class="text-muted line-clamp-2">
+          {{ launch.chatPrompt }}
+        </p>
+      </div>
       <!-- 页头（对齐 design/agent-admin.html：eyebrow + page-title + 新建按钮） -->
       <div class="flex items-end justify-between gap-4 flex-wrap mb-7">
         <div>
@@ -161,7 +170,7 @@ const openDelete = (agent: Agent) => {
         v-else-if="!data?.items.length"
         class="od-card py-20 text-center"
       >
-        <div class="w-14 h-14 rounded-2xl bg-accent text-white grid place-items-center mx-auto mb-4">
+        <div class="w-14 h-14 rounded-2xl bg-accent text-on-accent grid place-items-center mx-auto mb-4">
           <AppIcon
             name="bot"
             :size="26"
@@ -198,7 +207,7 @@ const openDelete = (agent: Agent) => {
         >
           <!-- 头部：avatar + 名称/模型 -->
           <div class="flex items-center gap-3">
-            <div class="w-[42px] h-[42px] rounded-xl bg-accent text-white grid place-items-center shrink-0">
+            <div class="w-[42px] h-[42px] rounded-xl bg-accent text-on-accent grid place-items-center shrink-0">
               <AppIcon
                 name="bot"
                 :size="20"

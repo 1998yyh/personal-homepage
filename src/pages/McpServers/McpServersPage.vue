@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import mcpServersApi from '../../lib/mcp-servers-api'
 import type { McpServer, McpServerPayload, McpServerType } from '../../types/mcp-server'
 import { useAuthStore } from '../../stores/auth'
-import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal.vue'
@@ -106,9 +105,7 @@ const openDelete = (server: McpServer) => {
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <Navbar />
-
+  <div class="page-root">
     <main class="max-w-[1280px] mx-auto px-6 py-10">
       <!-- 页头 -->
       <div class="flex items-end justify-between gap-4 flex-wrap mb-7">
@@ -206,7 +203,7 @@ const openDelete = (server: McpServer) => {
             <div class="flex items-center gap-3">
               <div
                 class="w-[42px] h-[42px] rounded-xl grid place-items-center shrink-0"
-                :class="server.type === 'stdio' ? 'bg-warn text-white' : 'bg-accent text-white'"
+                :class="server.type === 'stdio' ? 'bg-warn text-white' : 'bg-accent text-on-accent'"
               >
                 <AppIcon
                   name="plug"

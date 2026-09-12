@@ -1,9 +1,8 @@
 <script setup lang="ts">
 // 生成台板块壳：顶栏三能力 Tab + 满高工作区（左历史栏由 pane 承担）。
 // 不再给 pane 加 :key=tab——会话在 Pinia，整树重挂会丢掉进行中的占位。
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import StudioGeneratePane from './components/StudioGeneratePane.vue'
 import type { ModelCapability } from '../../types/ai-generation'
@@ -23,15 +22,16 @@ const activeTab = computed<TabKey>(() => {
 })
 // 词库目前只有图片提示词，视频 / 音频台不展示入口。
 // 宽屏默认展开；窄屏默认收起，避免进页挡住出图区。不写入本地，每次进页重新按宽度决定。
-const libraryOpen = ref(window.matchMedia('(min-width: 768px)').matches)
+const libraryOpen = ref(route.query.library === '1')
 const libraryAllowed = computed(() => activeTab.value === 'image')
+// 从侧栏进入提示词库时展开；普通生成入口为主创作区保留完整空间。
+watch(() => route.query.library, value => { libraryOpen.value = value === '1' })
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <Navbar />
-    <div class="flex h-[calc(100vh-4rem)] flex-col">
-      <div class="flex shrink-0 items-center gap-1 border-b border-border px-4">
+  <div class="page-root">
+    <div class="flex h-[calc(100dvh-4rem)] flex-col">
+      <div class="studio-capability-tabs flex shrink-0 items-center gap-1 border-b border-border px-4">
         <router-link
           v-for="t in TABS"
           :key="t.key"
@@ -76,3 +76,8 @@ const libraryAllowed = computed(() => activeTab.value === 'image')
     </div>
   </div>
 </template>
+
+<style scoped>
+.studio-capability-tabs{overflow-x:auto;scrollbar-width:thin;min-height:46px}.studio-capability-tabs>a,.studio-capability-tabs>button{flex-shrink:0;white-space:nowrap}
+@media(max-width:600px){.studio-capability-tabs{padding:0 8px;gap:0}.studio-capability-tabs>a,.studio-capability-tabs>button{padding:12px 10px;font-size:12px;gap:6px}}
+</style>

@@ -7,7 +7,6 @@ import stockWatchlistApi from '../../lib/stock-watchlist-api'
 import type { BSignalItem, ScanRun, SignalDateEntry } from '../../types/stock-signal'
 import { useAuthStore } from '../../stores/auth'
 import { showToast } from '../../composables/useToast'
-import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import WatchlistPanel from './components/WatchlistPanel.vue'
 
@@ -340,9 +339,7 @@ onBeforeUnmount(clearPoll)
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <Navbar />
-
+  <div class="page-root">
     <main class="max-w-[940px] mx-auto px-6 py-10">
       <!-- 页头（投资板块用领域点缀色） -->
       <div class="mb-7">

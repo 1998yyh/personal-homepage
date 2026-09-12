@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { Component } from 'vue'
-import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import Base64Tool from './tools/Base64Tool.vue'
 import UrlTool from './tools/UrlTool.vue'
@@ -68,9 +67,8 @@ const toolsOfCategory = (category: string) => filteredTools.value.filter(t => t.
 </script>
 
 <template>
-  <div class="min-h-screen">
+  <div class="page-root">
     <!-- 导航栏 -->
-    <Navbar />
 
     <!-- 主内容 -->
     <main class="max-w-7xl mx-auto px-6 py-10">

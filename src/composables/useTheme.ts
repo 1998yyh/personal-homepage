@@ -1,18 +1,38 @@
-import { ref } from 'vue'
+import { readonly, ref } from 'vue'
 
-// 亮/暗主题：初始值由 index.html 内联脚本写入 <html data-theme>，localStorage 键 zhe-theme
-export function useTheme() {
-  const theme = ref(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+export type Theme = 'dark' | 'light'
+// 全站共享一个响应式主题，设置、登录页与跨标签页修改保持一致。
+const theme = ref<Theme>(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark')
+const storageMessage = ref('')
 
-  const toggleTheme = () => {
-    theme.value = theme.value === 'dark' ? 'light' : 'dark'
-    document.documentElement.dataset.theme = theme.value
-    try {
-      localStorage.setItem('zhe-theme', theme.value)
-    } catch {
-      // 隐私模式下静默失败，仅本次会话生效
-    }
+function applyTheme(value: Theme) {
+  theme.value = value
+  document.documentElement.dataset.theme = value
+  document.documentElement.style.colorScheme = value
+}
+
+function setTheme(value: Theme) {
+  applyTheme(value)
+  try {
+    localStorage.setItem('zhe-theme', value)
+    localStorage.removeItem('tuanzi-ui-appearance')
+    storageMessage.value = '外观已保存，下次打开自动使用。'
+  } catch {
+    storageMessage.value = '已切换外观，当前浏览器无法保存设置。'
   }
+}
 
-  return { theme, toggleTheme }
+window.addEventListener('storage', (event) => {
+  if (event.key === 'zhe-theme' && (event.newValue === 'dark' || event.newValue === 'light')) {
+    applyTheme(event.newValue)
+  }
+})
+
+export function useTheme() {
+  return {
+    theme: readonly(theme),
+    storageMessage: readonly(storageMessage),
+    setTheme,
+    toggleTheme: () => setTheme(theme.value === 'dark' ? 'light' : 'dark'),
+  }
 }

@@ -2,7 +2,7 @@
 import AppIcon from './AppIcon.vue'
 import { useTheme } from '../composables/useTheme'
 
-// 认证页共用外壳（对齐 design/login.html、register.html 的 auth-stage）：
+// 认证页共用品牌外壳：
 // 返回首页 + 主题切换 + 左栏品牌叙事；右栏表单由 slot 提供
 defineProps<{
   lede: string
@@ -38,10 +38,15 @@ const { theme, toggleTheme } = useTheme()
       <!-- 左栏 · 品牌叙事 -->
       <aside class="auth-brand">
         <div class="auth-brand-top anim-rise">
-          <span class="brand-badge">哲</span>
+          <div class="auth-brand-name">
+            <span class="brand-badge"><AppIcon
+              name="sparkles"
+              :size="22"
+            /></span>团子 AI
+          </div>
           <div>
             <h2>
-              把重复的事交给<span class="u">工具<svg
+              把想象交给<span class="u">AI<svg
                 viewBox="0 0 120 12"
                 preserveAspectRatio="none"
               ><path
@@ -50,7 +55,7 @@ const { theme, toggleTheme } = useTheme()
                 stroke="currentColor"
                 stroke-width="3.5"
                 stroke-linecap="round"
-              /></svg></span>，<br>把思考留给自己。
+              /></svg></span>，<br>让创作更进一步。
             </h2>
             <p
               class="lede"
@@ -71,22 +76,22 @@ const { theme, toggleTheme } = useTheme()
           </li>
           <li>
             <AppIcon
-              name="trending-up"
+              name="image"
               :size="17"
             />
-            <div><b>A股 / 港股市场复盘</b><span>收盘后十分钟，知道今天该知道的事</span></div>
+            <div><b>图像、视频与无限画布</b><span>从一个想法开始，把灵感变成作品</span></div>
           </li>
           <li>
             <AppIcon
               name="shield"
               :size="17"
             />
-            <div><b>数据自有，匿名可访问</b><span>全站免登录可用，账户只用于个性化</span></div>
+            <div><b>自己的 Agent 工作空间</b><span>创建 AI 助手，连接工具与知识</span></div>
           </li>
         </ul>
 
         <div class="auth-brand-foot anim-rise d3">
-          终身学习 · 长期主义
+          对话 · 创作 · 发现
         </div>
       </aside>
 

@@ -1,37 +1,54 @@
 @import "tailwindcss";
 
-/* ===== 设计令牌（来自 Open Design 设计稿：human-approachable / 钴蓝 accent）===== */
-/* 亮主题为默认，<html data-theme="dark"> 切换暗色；切换逻辑在 Navbar 与 index.html 内联脚本 */
+/* ===== 团子 AI：米白陶土 / 深色苔绿；全站外观的唯一颜色来源 ===== */
 :root {
-  --bg:      oklch(98% 0.004 240);
-  --surface: oklch(100% 0 0);
-  --fg:      oklch(20% 0.02 240);
-  --muted:   oklch(50% 0.018 240);
-  --border:  oklch(90% 0.006 240);
-  --accent:  oklch(52% 0.16 258);
-
-  /* 语义色（按用途命名） */
-  --accent-soft:   color-mix(in oklch, var(--accent) 12%, var(--surface));
-  --accent-strong: oklch(42% 0.14 258);
-  --success: oklch(62% 0.14 155);
-  --warn:    oklch(70% 0.14 75);
-  --danger:  oklch(58% 0.18 25);
-  --domain:  oklch(60% 0.10 215);   /* 投资/数据板块的领域点缀色（偏青，与钴蓝主色拉开） */
-  --shadow-card: 0 1px 2px oklch(20% 0.02 240 / 0.05), 0 8px 24px -12px oklch(20% 0.02 240 / 0.12);
-  --shadow-lift: 0 2px 4px oklch(20% 0.02 240 / 0.06), 0 16px 40px -16px oklch(20% 0.02 240 / 0.18);
-  --radius: 16px;
+  color-scheme: light;
+  --bg: #f8f4ec;
+  --sidebar: #efe9de;
+  --surface: #fffcf6;
+  --panel: #eee3d6;
+  --fg: #43382f;
+  --muted: #7b685a;
+  --border: #ddd0bf;
+  --accent: #a65b40;
+  --accent-soft: #f0ded0;
+  --accent-strong: #914a32;
+  --on-accent: #fff9f1;
+  --success: #39734f;
+  --warn: #92651c;
+  --danger: #b84138;
+  --domain: #557581;
+  --shadow-card: 0 2px 12px #43382f05;
+  --shadow-lift: 0 8px 28px #43382f0d;
+  --radius: 12px;
+  --art-1: #f0e2ce;
+  --art-2: #ddbea0;
+  --art-3: #bc9475;
+  --art-4: #94745b;
 }
 [data-theme="dark"] {
-  --bg:      oklch(17% 0.012 240);
-  --surface: oklch(21% 0.014 240);
-  --fg:      oklch(94% 0.005 240);
-  --muted:   oklch(68% 0.015 240);
-  --border:  oklch(100% 0 0 / 0.09);
-  --accent:  oklch(70% 0.14 258);
-  --accent-soft:   color-mix(in oklch, var(--accent) 16%, var(--surface));
-  --accent-strong: oklch(76% 0.12 258);
-  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.3), 0 8px 24px -12px oklch(0% 0 0 / 0.4);
-  --shadow-lift: 0 2px 4px oklch(0% 0 0 / 0.35), 0 16px 40px -16px oklch(0% 0 0 / 0.5);
+  color-scheme: dark;
+  --bg: #111314;
+  --sidebar: #171a18;
+  --surface: #1b1e20;
+  --panel: #252d24;
+  --fg: #edf0e8;
+  --muted: #a0ac98;
+  --border: #394432;
+  --accent: #cbe699;
+  --accent-soft: #2c3824;
+  --accent-strong: #d0e6ac;
+  --on-accent: #2a391f;
+  --success: #83c99e;
+  --warn: #e1bc6b;
+  --danger: #ee8b81;
+  --domain: #85bbc1;
+  --shadow-card: 0 2px 12px #0000000d;
+  --shadow-lift: 0 8px 28px #00000026;
+  --art-1: #c3ccaf;
+  --art-2: #a1b28a;
+  --art-3: #738563;
+  --art-4: #42593e;
 }
 
 @theme {
@@ -43,6 +60,8 @@
    亮暗主题切换时工具类自动跟随，无需 dark: 变体 */
 @theme inline {
   --color-bg: var(--bg);
+  --color-on-accent: var(--on-accent);
+  --color-sidebar: var(--sidebar);
   --color-surface: var(--surface);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
@@ -91,15 +110,15 @@
   /* 按钮 */
   .od-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 10px 18px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600;
     letter-spacing: 0.02em; cursor: pointer; border: none;
     transition: transform .15s, box-shadow .2s, background .2s;
   }
   .od-btn:active { transform: translateY(1px); }
   .od-btn[disabled] { opacity: .5; cursor: not-allowed; }
   .od-btn-primary {
-    background: var(--accent); color: oklch(100% 0 0);
-    box-shadow: 0 1px 2px oklch(20% 0.02 240 / .1), 0 8px 20px -8px color-mix(in oklch, var(--accent) 60%, transparent);
+    background: var(--accent); color: var(--on-accent);
+    box-shadow: none;
   }
   .od-btn-primary:hover { background: color-mix(in oklch, var(--accent) 88%, black); box-shadow: var(--shadow-lift); }
   .od-btn-ghost { background: var(--surface); color: var(--fg); border: 1px solid var(--border); }
@@ -223,8 +242,8 @@
   /* ===== 认证页 · auth-shell 左右分栏（对齐 design/login.html、register.html）===== */
   .brand-badge {
     width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
-    background: linear-gradient(135deg, var(--accent), oklch(46% 0.13 285));
-    color: #fff; font-weight: 800; font-size: 16px; box-shadow: var(--shadow-card);
+    background: var(--accent); color: var(--on-accent);
+    color: var(--on-accent); font-weight: 800; font-size: 16px; box-shadow: var(--shadow-card);
   }
   .auth-stage { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; position: relative; }
   .auth-theme-btn { position: absolute; top: 20px; right: 20px; z-index: 10; }
@@ -240,10 +259,10 @@
     padding: 44px 40px; gap: 32px;
     /* accent-soft 的计算结果字面值（oklch 94.5% .02 258 ≈ accent 12% + surface），
        避开部分渲染引擎对 color-mix 的色相解析偏差；暗色值见下 */
-    background: oklch(94.5% 0.02 258);
+    background: var(--sidebar);
     border-right: 1px solid var(--border);
   }
-  [data-theme="dark"] .auth-brand { background: oklch(29% 0.022 258); }
+  [data-theme="dark"] .auth-brand { background: var(--sidebar); }
   .auth-brand-top { display: flex; flex-direction: column; gap: 22px; }
   .auth-brand .brand-badge { width: 40px; height: 40px; border-radius: 12px; font-size: 18px; }
   .auth-brand h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 2.6vw, 1.9rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
@@ -444,7 +463,7 @@
   background: color-mix(in oklch, var(--fg) 3%, transparent);
 }
 
-/* 主题色：默认 ai（钴蓝 accent），.theme-stock 切换为领域点缀色 domain */
+/* 主题色：默认 ai（当前主题 accent），.theme-stock 切换为领域点缀色 domain */
 .markdown-content.theme-stock a { color: var(--domain) !important; }
 .markdown-content.theme-stock blockquote { border-left-color: color-mix(in oklch, var(--domain) 35%, transparent); }
 
@@ -490,3 +509,46 @@
   .reasoning-shimmer { color: var(--muted); background: none; }
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }
+
+/* 全站外壳：侧栏与内容分列；工作区顶栏固定 64px，兼容聊天和生成台的满高计算。 */
+.app-shell{--sidebar-width:230px;min-height:100dvh}.desktop-sidebar{position:fixed;inset:0 auto 0 0;width:var(--sidebar-width);z-index:30}.app-sidebar{height:100dvh;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--border);padding:30px 18px 20px;overflow-y:auto}.app-brand{display:flex;align-items:center;gap:10px;color:var(--fg);font-size:20px;font-weight:650;letter-spacing:-.035em;padding:0 8px}.app-brand-mark{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);flex-shrink:0}.brand-beta{font-size:8px;letter-spacing:.06em;color:var(--accent-strong);background:var(--accent-soft);padding:2px 5px;border-radius:3px;font-weight:400}.sidebar-nav{display:grid;gap:5px}.sidebar-nav a,.sidebar-setting{display:flex;align-items:center;gap:12px;padding:11px 13px;min-height:46px;border-radius:8px;color:var(--muted);font-size:13px;cursor:pointer;border:1px solid transparent;background:none;text-align:left}.sidebar-nav a:hover,.sidebar-setting:hover{background:var(--panel);color:var(--fg)}.sidebar-nav a.active{background:var(--accent-soft);color:var(--accent-strong);border-color:var(--border)}.sidebar-nav i{margin-left:auto;width:5px;height:5px;background:var(--accent);border-radius:50%}.sidebar-label{font-size:11px;color:var(--muted);margin:30px 13px 12px}.sidebar-foot{margin-top:auto;padding-top:25px}.sidebar-setting{width:100%}.sidebar-setting svg:last-child{margin-left:auto}.sidebar-profile{display:flex;align-items:center;gap:9px;border-top:1px solid var(--border);padding:20px 2px 0;margin-top:8px}.sidebar-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;background:var(--accent-soft);color:var(--accent-strong);font-family:Georgia,serif}.sidebar-user{min-width:0;flex:1}.sidebar-user b,.sidebar-user small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sidebar-user b{font-size:12px;font-weight:550}.sidebar-user small{font-size:10px;color:var(--muted);margin-top:3px}.sidebar-account{font-size:11px;color:var(--accent-strong);cursor:pointer;min-height:44px;display:flex;align-items:center}.app-workspace{margin-left:var(--sidebar-width);min-width:0}.workspace-header{position:sticky;top:0;z-index:20;height:64px;border-bottom:1px solid var(--border);padding:0 40px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--bg)}.workspace-heading{display:flex;align-items:center;gap:15px;min-width:0;font-size:13px}.workspace-divider{color:var(--border)}.workspace-caption{color:var(--muted);font-size:12px}.workspace-action{font-size:12px;padding:8px 12px}.workspace-content{min-width:0}.page-root{min-height:calc(100dvh - 64px)}.mobile-menu-button{display:none}.mobile-sidebar-dialog{position:fixed;inset:0 auto 0 0;margin:0;padding:0;border:0;width:min(310px,calc(100vw - 45px));max-width:none;height:100dvh;max-height:none;background:var(--sidebar);color:var(--fg);overflow:auto}.mobile-sidebar-dialog::backdrop{background:#0006;backdrop-filter:blur(3px)}.mobile-nav-close{position:absolute;right:12px;top:25px;z-index:2}.mobile-sidebar-dialog .brand-beta{display:none}.mobile-sidebar-dialog .app-sidebar{border:0}.workspace-content>div>main{min-width:0}
+@media(min-width:1025px){.mobile-sidebar-dialog[open]{display:none}}
+@media(max-width:1200px) and (min-width:1025px){.app-shell{--sidebar-width:210px}.app-sidebar{padding-left:13px;padding-right:13px}.workspace-header{padding:0 26px}}
+@media(max-width:1024px){.desktop-sidebar{display:none}.app-workspace{margin-left:0}.mobile-menu-button{display:grid}.workspace-header{padding:0 20px}.workspace-caption,.workspace-divider{display:none}}
+@media(max-width:480px){.workspace-header{padding:0 16px}.workspace-action{font-size:11px}.workspace-content .page-root>main{padding-left:16px;padding-right:16px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+.auth-brand-name{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:650;color:var(--fg);margin-bottom:25px}
+
+/* 桌面折叠态保留图标与可访问名称，正文随侧栏释放宽度。 */
+.app-shell.sidebar-collapsed { --sidebar-width: 76px; }
+.desktop-sidebar { transition: width .18s ease; }
+.app-workspace { transition: margin-left .18s ease; }
+.sidebar-collapse-arrow { transform: rotate(180deg); }
+.app-sidebar.is-collapsed { padding-left: 12px; padding-right: 12px; }
+.is-collapsed .sidebar-text,
+.is-collapsed .sidebar-user,
+.is-collapsed .sidebar-avatar,
+.is-collapsed .sidebar-nav i,
+.is-collapsed .sidebar-setting svg:last-child { display: none; }
+
+.is-collapsed .sidebar-nav a,
+.is-collapsed .sidebar-setting { justify-content: center; padding: 11px 0; }
+.is-collapsed .sidebar-label { font-size: 0; height: 1px; background: var(--border); margin: 24px 9px 14px; }
+.is-collapsed .sidebar-profile { flex-direction: column; gap: 0; padding-top: 14px; }
+
+
+.app-sidebar > .sidebar-nav:first-of-type { margin-top: 30px; }
+
+/* 品牌保持固定尺寸与锚点，避免宽度过渡时换行和居中重排。 */
+.desktop-sidebar .app-sidebar { padding-left: 12px; padding-right: 12px; overflow-x: hidden; }
+.desktop-sidebar .app-brand { flex: 0 0 34px; height: 34px; width: max-content; padding: 0; margin-left: 9px; white-space: nowrap; }
+.sidebar-brand-text, .brand-beta { flex-shrink: 0; transition: opacity .12s ease; }
+.is-collapsed .sidebar-brand-text, .is-collapsed .brand-beta { opacity: 0; pointer-events: none; }
+.sidebar-nav a, .sidebar-setting { white-space: nowrap; flex-shrink: 0; }
+.sidebar-nav a > svg, .sidebar-setting > svg { flex-shrink: 0; }
+
+.sidebar-edge-toggle { position: absolute; top: 76px; right: -14px; width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--sidebar); color: var(--muted); cursor: pointer; z-index: 1; }
+.sidebar-edge-toggle::before { content: ''; position: absolute; inset: -8px; }
+.sidebar-edge-toggle:hover { background: var(--surface); color: var(--accent-strong); }
+.sidebar-edge-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

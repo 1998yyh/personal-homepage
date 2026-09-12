@@ -7,7 +7,6 @@ import { canvasApi } from '../../lib/canvas-api';
 import type { CanvasProjectSummary } from '../../types/canvas-api';
 import { useAuthStore } from '../../stores/auth';
 import { showToast } from '../../composables/useToast';
-import Navbar from '../../components/Navbar.vue';
 import EmptyState from '../../components/EmptyState.vue';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal.vue';
 import AppIcon from '../../components/AppIcon.vue';
@@ -67,8 +66,7 @@ function formatTime(value: string) {
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <Navbar />
+  <div class="page-root">
     <div class="max-w-[1080px] mx-auto px-6 py-10">
       <div class="flex flex-wrap items-center gap-3 mb-8">
         <div>
@@ -79,10 +77,11 @@ function formatTime(value: string) {
             节点式创作工作台：拖图、连线、组织灵感
           </p>
         </div>
-        <div class="ml-auto flex items-center gap-2">
+        <div class="ml-auto flex flex-wrap items-center gap-2 max-sm:w-full">
           <input
             v-model="keyword"
-            class="od-input h-10 w-56"
+            class="od-input h-10 sm:w-56 max-sm:w-full"
+            aria-label="搜索画布名称"
             placeholder="搜索画布名称"
             @keydown.enter="handleSearch"
           >

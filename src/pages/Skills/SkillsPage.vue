@@ -6,7 +6,6 @@ import skillsApi from '../../lib/skills-api'
 import mcpServersApi from '../../lib/mcp-servers-api'
 import type { Skill, SkillBuiltinToolName, SkillPayload } from '../../types/skill'
 import { useAuthStore } from '../../stores/auth'
-import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal.vue'
@@ -110,9 +109,7 @@ const openDelete = (skill: Skill) => {
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <Navbar />
-
+  <div class="page-root">
     <main class="max-w-[1280px] mx-auto px-6 py-10">
       <!-- 页头 -->
       <div class="flex items-end justify-between gap-4 flex-wrap mb-7">
@@ -197,7 +194,7 @@ const openDelete = (skill: Skill) => {
           >
             <!-- 头部：图标 + 名称 -->
             <div class="flex items-center gap-3">
-              <div class="w-[42px] h-[42px] rounded-xl bg-accent text-white grid place-items-center shrink-0">
+              <div class="w-[42px] h-[42px] rounded-xl bg-accent text-on-accent grid place-items-center shrink-0">
                 <AppIcon
                   name="zap"
                   :size="20"

@@ -7,7 +7,6 @@ import { exportAssets, importAssets } from '../../lib/assets-export'
 import { mediaApi, mediaUrl } from '../../lib/media-api'
 import type { Asset, AssetKind } from '../../types/asset'
 import { useAuthStore } from '../../stores/auth'
-import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal.vue'
@@ -228,9 +227,7 @@ const deleteMutation = useMutation({
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <Navbar />
-
+  <div class="page-root">
     <main class="max-w-[1280px] mx-auto px-6 py-10">
       <div class="flex items-end justify-between gap-4 flex-wrap mb-7">
         <div>

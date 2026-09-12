@@ -11,6 +11,7 @@ import {
 import type { StudioResult } from '../../../lib/studio/types'
 import type { ModelCapability } from '../../../types/ai-generation'
 import AppIcon from '../../../components/AppIcon.vue'
+import StudioImagePreview from './StudioImagePreview.vue'
 
 const props = defineProps<{
   result: StudioResult
@@ -82,17 +83,13 @@ const elapsed = computed(() => {
       </div>
 
       <!-- 图片 -->
-      <button
+      <StudioImagePreview
         v-else-if="capability === 'image' && src"
-        class="flex h-full w-full cursor-pointer items-center justify-center"
-        @click="emit('preview')"
-      >
-        <img
-          :src="src"
-          :alt="result.prompt"
-          class="max-h-full max-w-full rounded-2xl bg-fg/5 object-contain"
-        >
-      </button>
+        :key="`${result.key}:${src}`"
+        :src="src"
+        :alt="result.prompt"
+        @preview="emit('preview')"
+      />
 
       <!-- 视频 -->
       <video

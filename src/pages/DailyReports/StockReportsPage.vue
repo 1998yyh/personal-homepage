@@ -5,7 +5,6 @@ import dailyReportsApi from '../../lib/daily-report-api'
 import type { DailyReport } from '../../types/daily-report'
 import ReportList from './components/ReportList.vue'
 import ReportContent from './components/ReportContent.vue'
-import Navbar from '../../components/Navbar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
 const selectedReport = ref<DailyReport | null>(null)
@@ -31,9 +30,8 @@ watch(
 </script>
 
 <template>
-  <div class="min-h-screen">
+  <div class="page-root">
     <!-- 导航栏 -->
-    <Navbar />
 
     <!-- 主内容 -->
     <main class="max-w-7xl mx-auto px-6 py-10">

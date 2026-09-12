@@ -172,7 +172,7 @@ function handleCodeCopyClick(event: MouseEvent) {
     <!-- 头像 -->
     <div
       class="w-[30px] h-[30px] rounded-[9px] grid place-items-center shrink-0 text-xs font-semibold mt-0.5"
-      :class="role === 'user' ? 'bg-accent-soft text-accent-strong' : 'bg-accent text-white'"
+      :class="role === 'user' ? 'bg-accent-soft text-accent-strong' : 'bg-accent text-on-accent'"
     >
       <span v-if="role === 'user'">{{ userInitial }}</span>
       <AppIcon

@@ -92,7 +92,7 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <AuthShell lede="欢迎回来——今日的情报与复盘已经备好。">
+  <AuthShell lede="欢迎回来，继续你的 AI 对话与创作。">
     <div class="auth-logo anim-rise d1">
       <h1>欢迎回来</h1>
       <p>登录你的账户继续探索</p>
@@ -205,7 +205,7 @@ const handleSubmit = async () => {
       </router-link>
     </p>
     <p class="auth-foot anim-rise d5">
-      © 2026 Web Tools · 全站匿名可访问，登录用于展示个人信息
+      © 2026 团子 AI · 对话、创作与发现
     </p>
   </AuthShell>
 </template>
