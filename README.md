@@ -1,6 +1,8 @@
-# Personal Homepage - Web Tools Frontend
+# 团子 AI
 
-个人主页前端，包含登录注册、AI/股票日报阅读与开发工具箱，连接 Web Tools 后台 API。
+AI 工作空间前端，提供 Agent 对话、图像/视频/音频生成、无限画布、素材与提示词管理、AI 资讯。股票资讯和开发工具收纳在侧栏「更多工具」。
+
+外观可在侧栏「设置」中选择深色苔绿或米白陶土，选择自动保存在当前浏览器。首页输入可带入生成台或 Agent 对话，实际生成仍需在对应页面确认模型与参数。
 
 ## 技术栈
 
@@ -79,11 +81,11 @@ src/
 │   ├── daily-report-api.ts # 日报接口
 │   └── markdown.ts         # markdown-it 封装
 ├── components/
-│   └── Navbar.vue          # 顶部导航栏
+│   └── layout/             # 共享侧栏、顶栏和外观设置
 ├── pages/
 │   ├── LoginPage.vue       # 登录页
 │   ├── RegisterPage.vue    # 注册页
-│   ├── HomePage.vue        # 首页（需登录）
+│   ├── HomePage.vue        # AI 工作空间首页（公开）
 │   ├── DailyReports/       # AI/股票日报
 │   │   ├── AIReportsPage.vue
 │   │   ├── StockReportsPage.vue
