@@ -1,0 +1,167 @@
+<script setup lang="ts">
+// 已选定的两种外观通过设置切换；业务入口仍为预览交互。
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import type { LocationQueryRaw } from 'vue-router'
+import AppIcon from '../../components/AppIcon.vue'
+import VariantD from './VariantD.vue'
+import './prototype-light-palettes.css'
+
+const route = useRoute()
+const router = useRouter()
+type Appearance = 'D' | 'F'
+const preferenceKey = 'tuanzi-ui-appearance'
+// 明确的预览链接优先；普通入口恢复本地外观，不改旧版页面的主题存储。
+function initialAppearance(): Appearance {
+  if (route.query.variant === 'D' || route.query.variant === 'F') return route.query.variant
+  try { return localStorage.getItem(preferenceKey) === 'F' ? 'F' : 'D' } catch { return 'D' }
+}
+const variant = ref<Appearance>(initialAppearance())
+const settingsOpen = ref(false)
+const labels = { D: '深色苔绿', F: '米白陶土' }
+const storageNotice = ref('')
+const dialog = ref<HTMLDialogElement | null>(null)
+const previewTitle = ref('')
+const originalTitle = document.title
+const examples = ['把一篇长文整理成清晰的摘要', '围绕一个主题收集灵感和参考', '将一个初步想法发展成创作方案']
+
+function select(key: Appearance) {
+  variant.value = key
+  try {
+    localStorage.setItem(preferenceKey, key)
+    storageNotice.value = '外观已保存，下次打开自动使用。'
+  } catch {
+    storageNotice.value = '已切换外观；当前浏览器无法保存，下次打开将使用默认外观。'
+  }
+}
+function preview(title: string) {
+  settingsOpen.value = title === '设置'
+  previewTitle.value = title
+  dialog.value?.showModal()
+}
+watch(variant, () => {
+  document.title = `团子 AI · ${labels[variant.value]} · UI 原型`
+}, { immediate: true })
+onMounted(() => {
+  document.documentElement.classList.add('viewing-ui-prototype')
+  // 将一次性的配色直达链接归一为设置入口，刷新时以已保存的用户偏好为准。
+  if (route.query.variant) {
+    select(variant.value)
+    const query: LocationQueryRaw = { ...route.query, prototype: '1' }
+    delete query.variant
+    router.replace({ query })
+  }
+})
+onUnmounted(() => {
+  document.title = originalTitle
+  document.documentElement.classList.remove('viewing-ui-prototype')
+})
+</script>
+
+<template>
+  <div
+    class="ui-prototype"
+    :class="`prototype-${variant.toLowerCase()}`"
+  >
+    <VariantD
+      @preview="preview"
+    />
+    <dialog
+      ref="dialog"
+      class="prototype-dialog"
+      aria-labelledby="prototype-dialog-title"
+      @click="event => { if (event.target === dialog) dialog?.close() }"
+    >
+      <div class="dialog-top">
+        <span>{{ settingsOpen ? '设置 / 外观' : '交互预览' }}</span><button
+          aria-label="关闭预览"
+          @click="dialog?.close()"
+        >
+          <AppIcon
+            name="x"
+            :size="20"
+          />
+        </button>
+      </div>
+      <template v-if="settingsOpen">
+        <h2 id="prototype-dialog-title">
+          选择你喜欢的外观
+        </h2>
+        <p>为你的 AI 工作空间，选一个舒服的颜色。</p>
+        <div
+          class="appearance-options"
+          role="group"
+          aria-label="外观方案"
+        >
+          <button
+            v-for="key in (['D', 'F'] as const)"
+            :key="key"
+            class="appearance-option"
+            :class="{ selected: variant === key }"
+            :aria-pressed="variant === key"
+            @click="select(key)"
+          >
+            <span
+              class="appearance-sample"
+              :class="key === 'D' ? 'sample-dark' : 'sample-light'"
+              aria-hidden="true"
+            ><i /><span><b /><em /><em /></span></span>
+            <span class="appearance-label">{{ labels[key] }}<AppIcon
+              v-if="variant === key"
+              name="check"
+              :size="17"
+            /></span>
+            <small>{{ key === 'D' ? '炭黑底色 · 柔和苔绿' : '暖米白底色 · 陶土橙' }}</small>
+          </button>
+        </div>
+        <p
+          class="appearance-notice"
+          role="status"
+        >
+          {{ storageNotice || '选择后立即生效，并保存在此浏览器。' }}
+        </p>
+        <button
+          class="dialog-return"
+          @click="dialog?.close()"
+        >
+          完成
+        </button>
+      </template>
+      <template v-else>
+        <span class="dialog-icon"><AppIcon
+          name="sparkles"
+          :size="28"
+        /></span>
+        <h2 id="prototype-dialog-title">
+          {{ previewTitle }}
+        </h2>
+        <p>这里展示所选入口的交互反馈。当前是视觉原型，未发送 AI 请求。</p>
+        <div class="dialog-examples">
+          <span
+            v-for="example in examples"
+            :key="example"
+          ><AppIcon
+            name="check"
+            :size="16"
+          />{{ example }}</span>
+        </div>
+        <button
+          class="dialog-return"
+          @click="dialog?.close()"
+        >
+          继续比较页面
+        </button>
+      </template>
+    </dialog>
+  </div>
+</template>
+
+<style>
+/* 米白方案的装饰色保持暖色相。 */
+.prototype-f{--prototype-hue:75}
+
+html.viewing-ui-prototype{color-scheme:light;scroll-behavior:auto}.ui-prototype{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;line-height:1.6;min-height:100vh;font-size:14px}.ui-prototype button,.ui-prototype a{-webkit-tap-highlight-color:transparent}.ui-prototype button{font:inherit;cursor:pointer}.ui-prototype button:focus-visible,.ui-prototype a:focus-visible,.ui-prototype textarea:focus-visible{outline:2px solid oklch(from #cbe699 l c var(--prototype-hue, h));outline-offset:4px}.ui-prototype button{transition:background .18s,color .18s,border-color .18s}.ui-prototype svg{flex-shrink:0}.ui-prototype h1,.ui-prototype h2,.ui-prototype h3,.ui-prototype p{margin:0}.ui-prototype a{text-decoration:none}.ui-prototype .proto-logo{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:650;letter-spacing:-.04em}.ui-prototype .proto-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:11px}.ui-prototype .proto-eyebrow{font-size:11px;letter-spacing:.15em;text-transform:uppercase}.ui-prototype .proto-arrow{display:inline-flex;gap:10px;align-items:center}.prototype-dialog{position:fixed;inset:0;margin:auto;background:#fff;color:#252622;border:1px solid #dedfd7;border-radius:24px;padding:28px;max-width:490px;width:calc(100vw - 36px);max-height:85vh;overflow:auto;box-shadow:0 30px 100px #0004}.prototype-dialog::backdrop{background:#131b2466;backdrop-filter:blur(6px)}.dialog-top{display:flex;align-items:center;justify-content:space-between;color:#70766a;font-size:12px}.dialog-top button{border:0;background:transparent;width:40px;height:40px;display:grid;place-items:center}.dialog-icon{display:grid;place-items:center;margin:24px 0;width:58px;height:58px;border-radius:18px;background:#eff3e9;color:#61734f}.prototype-dialog h2{font-size:24px;font-weight:650;overflow-wrap:anywhere}.prototype-dialog p{font-size:14px;color:#74796e;margin:16px 0}.dialog-examples{display:grid;gap:14px;padding:20px 0;border-top:1px solid #e7e8e1}.dialog-examples span{display:flex;gap:10px;align-items:center;font-size:13px}.dialog-return{background:#27352d;color:#fff;border:0;padding:12px 20px;border-radius:10px;width:100%;margin-top:16px}
+.ui-prototype .prototype-dialog{background:oklch(from #1b1e20 l c var(--prototype-hue,h));color:#e8ece3;border-color:oklch(from #3c4534 l c var(--prototype-hue,h));color-scheme:dark}.ui-prototype .dialog-top,.ui-prototype .prototype-dialog p{color:oklch(from #a5b09c l c var(--prototype-hue,h))}.ui-prototype .dialog-icon{background:oklch(from #303c28 l c var(--prototype-hue,h));color:oklch(from #cbe699 l c var(--prototype-hue,h))}.ui-prototype .dialog-examples{border-color:oklch(from #3c4534 l c var(--prototype-hue,h))}.ui-prototype .dialog-return{background:oklch(from #cbe699 l c var(--prototype-hue,h));color:oklch(from #2a391f l c var(--prototype-hue,h))}
+@media(prefers-reduced-motion:reduce){.ui-prototype *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+.appearance-options{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0}.appearance-option{text-align:left;background:transparent;border:1px solid #66745b;border-radius:12px;padding:12px;color:inherit;min-width:0}.appearance-option.selected{outline:2px solid #9bae82;outline-offset:2px}.appearance-label{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:550;margin-top:12px}.appearance-option small{font-size:11px;opacity:.75}.appearance-sample{display:flex;gap:10px;border:1px solid #ffffff18;border-radius:7px;height:95px;padding:10px;background:#111314}.appearance-sample>i{width:24%;border-radius:3px;background:#293321}.appearance-sample>span{flex:1;padding-top:4px}.appearance-sample b{display:block;height:10px;width:65%;background:#cbe699;border-radius:3px;margin-bottom:13px}.appearance-sample em{display:block;height:10px;background:#252b24;border-radius:3px;margin-top:7px}.appearance-sample.sample-light{background:#f8f4ec;border-color:#ddd0bf}.sample-light>i{background:#e5dbcf}.sample-light b{background:#a65b40}.sample-light em{background:#eae0d3}.prototype-f .appearance-option{border-color:#ddd0bf}.prototype-f .appearance-option.selected{outline-color:#a65b40}.prototype-f .appearance-option.selected .appearance-label{color:#a65b40}.appearance-notice{font-size:12px!important;min-height:38px}.ui-prototype .studio-main{padding-bottom:55px!important}
+</style>

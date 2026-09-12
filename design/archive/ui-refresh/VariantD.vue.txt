@@ -1,0 +1,26 @@
+<script setup lang="ts">
+import PrototypeStudio from './PrototypeStudio.vue'
+import PrototypeDarkSidebar from './PrototypeDarkSidebar.vue'
+
+// 配色共用已选定的 D 版布局，切换颜色时保留输入内容和创作模式。
+const emit = defineEmits<{ preview: [title: string] }>()
+</script>
+
+<template>
+  <div class="d-shell">
+    <PrototypeStudio
+      @preview="title => emit('preview', title)"
+    >
+      <template #sidebar>
+        <PrototypeDarkSidebar @preview="title => emit('preview', title)" />
+      </template>
+    </PrototypeStudio>
+  </div>
+</template>
+
+<style scoped>
+.d-shell :deep(.studio-header){padding:0 40px}.d-shell :deep(.studio-main){max-width:1160px;padding-left:40px;padding-right:40px}.d-shell :deep(.studio-header nav){gap:30px}.d-shell :deep(.studio-hero){padding-top:35px;min-height:350px}.d-shell :deep(.studio-hero h1){font-size:clamp(30px,3.2vw,44px)}
+@media(max-width:1100px){.d-shell :deep(.studio-main){padding-left:26px;padding-right:26px}.d-shell :deep(.studio-header){padding:0 26px}.d-shell :deep(.studio-hero){grid-template-columns:1.2fr 1fr}.d-shell :deep(.studio-hero h1){font-size:32px}.d-shell :deep(.studio-engine-label){display:none}.d-shell :deep(.studio-feature h3){font-size:14px}}
+@media(max-width:900px) and (min-width:721px){.d-shell :deep(.studio-orb-art){opacity:.5}.d-shell :deep(.studio-hero){gap:0;grid-template-columns:1.4fr 1fr}.d-shell :deep(.studio-hero h1){font-size:27px}.d-shell :deep(.studio-orb-ring){width:160px;height:160px;left:calc(50% - 80px);top:65px}.d-shell :deep(.studio-explore-grid){grid-template-columns:1fr}.d-shell :deep(.studio-feature){min-height:225px}.d-shell :deep(.studio-feature h3){font-size:18px}.d-shell :deep(.studio-header nav){gap:16px}.d-shell :deep(.studio-header-action){font-size:10px!important}.d-shell :deep(.studio-header){gap:12px}}
+@media(max-width:720px){.d-shell :deep(.studio-shell){flex-direction:column}.d-shell :deep(.studio-header){min-height:62px;padding:12px 23px;flex-wrap:nowrap;gap:10px}.d-shell :deep(.studio-header nav){order:0;width:auto;gap:18px}.d-shell :deep(.studio-header nav button){font-size:11px}.d-shell :deep(.studio-header-action){font-size:10px!important;padding:8px}.d-shell :deep(.studio-header-action svg){display:none}.d-shell :deep(.studio-main){padding-left:23px;padding-right:23px}.d-shell :deep(.studio-hero){display:block;min-height:310px;padding-top:35px}.d-shell :deep(.studio-hero h1){font-size:32px}.d-shell :deep(.studio-feature h3){font-size:18px}}
+</style>

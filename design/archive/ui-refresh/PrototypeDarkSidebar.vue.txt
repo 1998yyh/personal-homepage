@@ -1,0 +1,137 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import AppIcon from '../../components/AppIcon.vue'
+
+const emit = defineEmits<{ preview: [title: string] }>()
+const expanded = ref(false)
+const nav = [
+  { icon: 'grid', title: '工作空间' }, { icon: 'message-square', title: 'AI 对话' },
+  { icon: 'sparkles', title: '创作生成' }, { icon: 'group', title: '无限画布' }, { icon: 'newspaper', title: 'AI 资讯' },
+]
+const resources = [{ icon: 'image', title: '素材库' }, { icon: 'type', title: '提示词库' }, { icon: 'plug', title: '模型渠道' }]
+function preview(title: string) {
+  expanded.value = false
+  emit('preview', title)
+}
+</script>
+
+<template>
+  <aside
+    class="d-sidebar"
+    aria-label="工作空间侧栏"
+  >
+    <div class="d-sidebar-top">
+      <div class="proto-logo">
+        <span class="proto-mark"><AppIcon
+          name="sparkles"
+          :size="22"
+        /></span>团子 AI<span class="d-beta">BETA</span>
+      </div>
+      <button
+        class="d-mobile-toggle"
+        :aria-expanded="expanded"
+        aria-controls="d-sidebar-content"
+        @click="expanded = !expanded"
+      >
+        <AppIcon
+          :name="expanded ? 'x' : 'grid'"
+          :size="18"
+        />{{ expanded ? '收起' : '功能导航' }}
+      </button>
+    </div>
+    <div
+      id="d-sidebar-content"
+      class="d-sidebar-content"
+      :class="{ expanded }"
+    >
+      <button
+        class="d-new"
+        @click="preview('开启新对话')"
+      >
+        <AppIcon
+          name="plus"
+          :size="18"
+        />开启新对话<AppIcon
+          name="message-square"
+          :size="15"
+        />
+      </button>
+      <nav
+        class="d-nav"
+        aria-label="主要功能"
+      >
+        <button
+          v-for="(item, index) in nav"
+          :key="item.title"
+          :class="{ active: index === 0 }"
+          :aria-current="index === 0 ? 'page' : undefined"
+          @click="preview(item.title)"
+        >
+          <AppIcon
+            :name="item.icon"
+            :size="18"
+          /><span>{{ item.title }}</span><i v-if="index === 0" />
+        </button>
+      </nav>
+      <div class="d-nav-label">
+        我的资源
+      </div>
+      <nav
+        class="d-nav"
+        aria-label="资源管理"
+      >
+        <button
+          v-for="item in resources"
+          :key="item.title"
+          @click="preview(item.title)"
+        >
+          <AppIcon
+            :name="item.icon"
+            :size="18"
+          /><span>{{ item.title }}</span>
+        </button>
+      </nav>
+      <div class="d-sidebar-foot">
+        <button
+          class="d-extras"
+          @click="preview('设置')"
+        >
+          <AppIcon
+            name="settings"
+            :size="17"
+          />设置<AppIcon
+            name="chevron-right"
+            :size="15"
+          />
+        </button>
+        <button
+          class="d-extras"
+          @click="preview('更多工具 · 股票资讯与开发工具')"
+        >
+          <AppIcon
+            name="wrench"
+            :size="17"
+          />更多工具<AppIcon
+            name="chevron-right"
+            :size="15"
+          />
+        </button>
+        <button
+          class="d-profile"
+          @click="preview('个人空间')"
+        >
+          <span class="d-avatar">T</span><span><b>我的空间</b><small>让 AI 参与每一天</small></span><AppIcon
+            name="chevron-down"
+            :size="15"
+          />
+        </button>
+      </div>
+    </div>
+  </aside>
+</template>
+
+<style scoped>
+.d-sidebar{width:230px;flex-shrink:0;background:oklch(from #171a18 l c var(--prototype-hue, h) / alpha);border-right:1px solid oklch(from #2c332b l c var(--prototype-hue, h) / alpha);padding:30px 18px 22px;display:flex;flex-direction:column;position:sticky;top:0;height:100dvh;color:oklch(from #a5b09c l c var(--prototype-hue, h) / alpha);overflow-y:auto}.d-sidebar .proto-logo{font-size:20px;padding:0 8px;color:oklch(from #ebeee6 l c var(--prototype-hue, h) / alpha);gap:10px}.d-sidebar .proto-mark{background:oklch(from #d0eaa0 l c var(--prototype-hue, h) / alpha);color:oklch(from #2c3b21 l c var(--prototype-hue, h) / alpha)}.d-beta{font-size:8px;letter-spacing:.07em;color:oklch(from #a2b984 l c var(--prototype-hue, h) / alpha);background:oklch(from #2e3826 l c var(--prototype-hue, h) / alpha);border:1px solid oklch(from #3e4a32 l c var(--prototype-hue, h) / alpha);padding:2px 5px;border-radius:3px;font-weight:400}.d-sidebar-content{display:flex;flex-direction:column;flex:1}.d-new{display:flex;align-items:center;gap:9px;border:1px solid oklch(from #a3be77 l c var(--prototype-hue, h) / alpha);background:oklch(from #cbe699 l c var(--prototype-hue, h) / alpha);color:oklch(from #2a391f l c var(--prototype-hue, h) / alpha);padding:12px;border-radius:9px;margin:35px 0 22px;font-size:12px!important;font-weight:550!important;min-height:46px}.d-new svg:last-child{margin-left:auto;color:oklch(from #516536 l c var(--prototype-hue, h) / alpha)}.d-new:hover{background:oklch(from #ddf6b3 l c var(--prototype-hue, h) / alpha)}.d-nav{display:grid;gap:5px}.d-nav button{border:1px solid transparent;background:none;padding:11px 13px;min-height:46px;display:flex;align-items:center;gap:12px;border-radius:8px;color:oklch(from #929e8b l c var(--prototype-hue, h) / alpha);text-align:left;font-size:13px}.d-nav button:hover{background:oklch(from #242e20 l c var(--prototype-hue, h) / alpha);color:oklch(from #d5e5be l c var(--prototype-hue, h) / alpha)}.d-nav button.active{background:oklch(from #2c3824 l c var(--prototype-hue, h) / alpha);border-color:oklch(from #3b4a2f l c var(--prototype-hue, h) / alpha);color:oklch(from #d0e6ac l c var(--prototype-hue, h) / alpha);font-weight:550}.d-nav button.active i{margin-left:auto;width:5px;height:5px;background:oklch(from #cae799 l c var(--prototype-hue, h) / alpha);border-radius:50%;box-shadow:0 0 10px oklch(from #b6ed5733 l c var(--prototype-hue, h) / alpha)}.d-nav-label{font-size:10px;color:oklch(from #6d7b63 l c var(--prototype-hue, h) / alpha);margin:31px 14px 13px;letter-spacing:.08em}.d-sidebar-foot{margin-top:auto;padding-top:40px}.d-extras{display:flex;align-items:center;gap:12px;border:0;background:none;color:oklch(from #839177 l c var(--prototype-hue, h) / alpha);padding:14px;font-size:12px!important;width:100%;min-height:46px}.d-extras:hover{color:oklch(from #d0e6ac l c var(--prototype-hue, h) / alpha)}.d-extras svg:last-child{margin-left:auto}.d-profile{display:flex;align-items:center;gap:10px;border:0;border-top:1px solid oklch(from #2d352a l c var(--prototype-hue, h) / alpha);background:none;width:100%;text-align:left;padding:21px 6px 0;margin-top:8px;color:oklch(from #b6c4a9 l c var(--prototype-hue, h) / alpha)}.d-avatar{height:34px;width:34px;display:grid;place-items:center;background:oklch(from #303c28 l c var(--prototype-hue, h) / alpha);color:oklch(from #b6cc9b l c var(--prototype-hue, h) / alpha);border:1px solid oklch(from #414d36 l c var(--prototype-hue, h) / alpha);border-radius:50%;font-family:Georgia,serif}.d-profile b,.d-profile small{display:block}.d-profile b{font-size:12px;font-weight:550}.d-profile small{font-size:10px;color:oklch(from #718164 l c var(--prototype-hue, h) / alpha);margin-top:3px}.d-profile>svg{margin-left:auto;color:oklch(from #859776 l c var(--prototype-hue, h) / alpha)}.d-mobile-toggle{display:none}
+@media(max-width:1100px){.d-sidebar{width:210px;padding-left:13px;padding-right:13px}.d-sidebar .proto-logo{font-size:18px}}
+@media(max-width:720px){.d-sidebar{width:100%;height:auto;position:relative;padding:20px 23px;border-right:0;border-bottom:1px solid oklch(from #2c332b l c var(--prototype-hue, h) / alpha);overflow:visible}.d-sidebar-top{display:flex;justify-content:space-between;gap:15px;align-items:center}.d-sidebar .proto-logo{padding:0;font-size:19px}.d-beta{display:none}.d-mobile-toggle{display:flex;align-items:center;gap:7px;min-height:44px;padding:8px 11px;background:oklch(from #252f21 l c var(--prototype-hue, h) / alpha);border:1px solid oklch(from #3c4b31 l c var(--prototype-hue, h) / alpha);color:oklch(from #b7ce99 l c var(--prototype-hue, h) / alpha);border-radius:7px;font-size:11px!important}.d-sidebar-content{display:none}.d-sidebar-content.expanded{display:flex}.d-new{margin:20px 0 13px}.d-nav{grid-template-columns:1fr 1fr;gap:5px}.d-nav button{font-size:12px;gap:10px;padding:10px 12px}.d-nav-label{margin-top:21px}.d-sidebar-foot{padding-top:14px}.d-profile{padding-bottom:0}.d-extras{padding-left:12px}}
+</style>

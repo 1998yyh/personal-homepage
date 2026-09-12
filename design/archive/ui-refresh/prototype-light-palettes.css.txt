@@ -1,0 +1,77 @@
+/* 浅色方案单独定义表面、文字与强调色，保留 D 版的几何布局。 */
+.ui-prototype.prototype-f {
+  --light-bg: #f8f4ec;
+  --light-sidebar: #efe9de;
+  --light-surface: #fffcf6;
+  --light-panel: #eee3d6;
+  --light-border: #ddd0bf;
+  --light-fg: #43382f;
+  --light-muted: #7b685a;
+  --light-accent: #a65b40;
+  --light-accent-hover: #87472f;
+  --light-soft: #f0ded0;
+  --light-on-accent: #fff9f1;
+  --light-art-1: #f0e2ce;
+  --light-art-2: #ddbea0;
+  --light-art-3: #bc9475;
+  --light-art-4: #94745b;
+}
+.ui-prototype.prototype-f .studio-shell {
+  background: var(--light-bg); color: var(--light-fg); color-scheme: light;
+}
+.ui-prototype.prototype-f .d-sidebar {
+  background: var(--light-sidebar); border-color: var(--light-border); color: var(--light-muted);
+}
+.ui-prototype.prototype-f :is(.d-sidebar .proto-logo,.studio-header nav button.active,.studio-feature h3,.d-profile b) { color: var(--light-fg); }
+.ui-prototype.prototype-f :is(.d-sidebar .proto-mark,.d-new,.studio-generate,.dialog-return) {
+  background: var(--light-accent); color: var(--light-on-accent); border-color: var(--light-accent);
+}
+.ui-prototype.prototype-f :is(.d-new:hover,.studio-generate:hover,.dialog-return:hover) { background: var(--light-accent-hover); }
+.ui-prototype.prototype-f .d-new svg:last-child { color: var(--light-on-accent); opacity: .8; }
+.ui-prototype.prototype-f :is(.d-beta,.d-avatar,.d-mobile-toggle,.studio-header-action,.studio-modes button.active,.dialog-icon) {
+  background: var(--light-soft); color: var(--light-accent); border-color: var(--light-border);
+}
+.ui-prototype.prototype-f .d-nav button.active {
+  background: var(--light-soft); color: var(--light-accent); border-color: color-mix(in srgb,var(--light-accent) 20%,var(--light-border));
+}
+.ui-prototype.prototype-f :is(.d-nav button:hover,.studio-header-action:hover,.studio-modes button:hover,.studio-settings-row button:hover,.studio-inspirations button:hover) {
+  background: var(--light-panel); color: var(--light-accent);
+}
+.ui-prototype.prototype-f :is(.d-nav button,.d-nav-label,.d-extras,.d-profile,.d-profile small,.d-profile>svg,.studio-header nav button,.studio-hero-copy>p,.studio-hero-tags,.studio-engine-label,.studio-modes button,.studio-inspirations,.studio-inspirations button,.studio-section-heading .proto-eyebrow,.studio-footer,.studio-footer-muted,.studio-footer button,.studio-feature p,.dialog-top,.prototype-dialog p) { color: var(--light-muted); }
+.ui-prototype.prototype-f :is(.studio-hero h1>span,.studio-hero .proto-eyebrow,.studio-section-heading>button,.d-extras:hover,.studio-feature-meta) { color: var(--light-accent); }
+.ui-prototype.prototype-f :is(.studio-status-dot,.d-nav button.active i) { background: var(--light-accent); box-shadow: none; }
+.ui-prototype.prototype-f :is(.studio-header,.d-profile,.studio-mode-bar,.dialog-examples) { border-color: var(--light-border); }
+.ui-prototype.prototype-f .studio-hero-tags i { background: var(--light-border); }
+.ui-prototype.prototype-f .studio-generator {
+  background: var(--light-surface); border-color: var(--light-border);
+  box-shadow: 0 6px 24px color-mix(in srgb,var(--light-accent) 5%,transparent);
+}
+.ui-prototype.prototype-f .studio-generator textarea { color: var(--light-fg); }
+.ui-prototype.prototype-f .studio-generator textarea::placeholder { color: var(--light-muted); }
+.ui-prototype.prototype-f :is(.studio-settings-row button,.studio-inspirations button) { color: var(--light-muted); border-color: var(--light-border); background: var(--light-bg); }
+.ui-prototype.prototype-f :is(button:focus-visible,textarea:focus-visible) { outline-color: var(--light-accent); }
+.ui-prototype.prototype-f .studio-feature { color: var(--light-fg); background: var(--light-panel); border-color: var(--light-border); }
+.ui-prototype.prototype-f .studio-feature:hover { border-color: var(--light-accent); }
+.ui-prototype.prototype-f .studio-feature-arrow { color: var(--light-accent); background: var(--light-surface); border-color: var(--light-border); }
+.ui-prototype.prototype-f .studio-landscape { background: linear-gradient(150deg,var(--light-art-1),var(--light-panel)); }
+.ui-prototype.prototype-f .studio-landscape:after { background: linear-gradient(transparent 16%,color-mix(in srgb,var(--light-surface) 35%,transparent) 55%,var(--light-surface)); }
+.ui-prototype.prototype-f .studio-planet { background: radial-gradient(circle at 35% 30%,var(--light-surface),var(--light-art-2) 45%,var(--light-art-4) 90%); box-shadow: 0 0 28px color-mix(in srgb,var(--light-art-2) 40%,transparent); }
+.ui-prototype.prototype-f .studio-mountain { background: linear-gradient(100deg,var(--light-art-1),var(--light-art-2) 48%,var(--light-art-3) 49%,var(--light-art-4)); }
+.ui-prototype.prototype-f .studio-mountain.m2 { background: linear-gradient(100deg,var(--light-art-2),var(--light-art-3) 49%,var(--light-art-4) 50%); }
+.ui-prototype.prototype-f .studio-mountain.m3 { background: linear-gradient(100deg,var(--light-art-1),var(--light-art-2) 48%,var(--light-art-3) 49%); }
+.ui-prototype.prototype-f .studio-landscape-grid { opacity: .15; }
+.ui-prototype.prototype-f .studio-node-art { background-image: radial-gradient(var(--light-art-3) .7px,transparent .7px); }
+.ui-prototype.prototype-f .studio-node { background: var(--light-surface); border-color: var(--light-art-2); color: var(--light-accent); box-shadow: 0 5px 12px color-mix(in srgb,var(--light-art-4) 12%,transparent); }
+.ui-prototype.prototype-f .studio-node.node-2 { background: linear-gradient(145deg,var(--light-art-1),var(--light-art-2)); color: var(--light-accent); }
+.ui-prototype.prototype-f .studio-node i { background: var(--light-art-3); }
+.ui-prototype.prototype-f .studio-node-line { border-color: var(--light-art-3); }
+.ui-prototype.prototype-f .studio-orb-ring {
+  border-color: var(--light-art-2);
+  box-shadow: inset 3px 2px 8px #ffffffb3,inset -5px -4px 8px var(--light-art-3),2px 2px 3px #ffffffb3,5px 8px 14px color-mix(in srgb,var(--light-art-4) 20%,transparent);
+}
+.ui-prototype.prototype-f .studio-ring-2 { border-color: var(--light-art-1); }
+.ui-prototype.prototype-f .studio-ring-3 { border-color: var(--light-art-3); }
+.ui-prototype.prototype-f .studio-orb-core { background: radial-gradient(circle at 30% 30%,var(--light-surface),var(--light-art-1) 24%,var(--light-art-3) 66%,var(--light-accent) 90%); box-shadow: 0 0 35px color-mix(in srgb,var(--light-art-2) 35%,transparent); }
+.ui-prototype.prototype-f .studio-orb-glow { background: radial-gradient(ellipse,var(--light-panel),transparent 65%); }
+.ui-prototype.prototype-f :is(.studio-orb-coordinate,.studio-orb-caption,.studio-orb-cross) { color: var(--light-muted); }
+.ui-prototype.prototype-f .prototype-dialog { background: var(--light-surface); color: var(--light-fg); border-color: var(--light-border); color-scheme: light; }

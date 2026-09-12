@@ -23,6 +23,7 @@ logs/
 
 # 测试
 coverage/
+results/
 
 # 临时文件
 *.tmp
