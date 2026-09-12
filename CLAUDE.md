@@ -34,7 +34,7 @@ node --test tests/*.test.mjs  # lib 纯函数单测（node:test + Node≥22.18 �
 src/
 ├── lib/            # 框架无关层：api.ts（axios 实例+拦截器）、daily-report-api.ts、markdown.ts、
 │                   #   canvas-api/generation-api/channels-api/prompts-api/assets-api/media-api、
-│                   #   agents-api/mcp-servers-api/skills-api/stock-signals-api/stock-watchlist-api、
+│                   #   agents-api/mcp-servers-api/skills-api、
 │                   #   zip.ts（fflate）+ assets-export.ts、canvas/（画布纯函数层）、
 │                   #   studio/（生成台纯函数层：models/params/snapshot/assets/types）、
 │                   #   video-model-config.ts（视频模型素材/参数校验，tests/ 单测对象）
@@ -45,7 +45,7 @@ src/
 ├── router/         # vue-router 路由表 + 全局前置守卫（鉴权在这里，不在组件里）
 ├── components/     # layout/（AppShell、AppSidebar、AppearanceSettings、navigation.ts）、AuthShell.vue、
 │                   #   AppIcon.vue（图标唯一来源）、AppToast.vue（全局 toast，App.vue 挂载）、EmptyState、
-│                   #   ConfirmDeleteModal、WatchlistCard.vue（首页观察池卡）、ui/OdSelect.vue（全站唯一下拉，reka-ui 封装）
+│                   #   ConfirmDeleteModal、ui/OdSelect.vue（全站唯一下拉，reka-ui 封装）
 └── pages/
     ├── DailyReports/   # AI/股票日报 + components/（ReportList、ReportContent）
     ├── Home/           # 首页组件（HomeHero/HomeComposer/HomeFeatures），由 pages/HomePage.vue 组合
@@ -59,8 +59,6 @@ src/
     ├── Channels/       # AI 渠道管理（卡片 + 抽屉表单，apiKey 只写不读）
     ├── Prompts/        # 内部提示词库（生成台侧栏，/prompts 路由已重定向 /studio；分类/标签筛选、按 canManage 新增、按 canEdit 编辑、按 canEdit 删除）
     ├── Assets/         # 素材库（kind Tab + 搜索 + ZIP 导入导出）
-    ├── StockSignals/   # B 信号筛选 + 观察池双 Tab（次级页，不进主导航；入口在 StockReportsPage；扫描需登录、
-    │                   #   结果公开；观察池登录私有：勾选入池盯 S，出 S 标红，?tab=pool 直达，WatchlistPanel 在 components/）
     ├── McpServers/     # MCP Server 管理（次级页；入口在 AgentsPage；列表仅返回启用中，env/headers 只写）
     ├── Skills/         # Skill 管理（次级页；入口在 AgentsPage；列表仅返回启用中）
     └── Agents/
@@ -84,12 +82,14 @@ src/
 
 **画布平台**（2026-08 从 infinite-canvas 迁移，AGPL-3.0，见根目录 NOTICE；后端设计文档在 tuanzi-server-base `docs/plans/2026-08-07-canvas-platform-design.md`）：画布文档存后端 MySQL（`canvas_projects.document` JSON + version 乐观锁），所有保存走 `stores/canvas.ts` 的 debounce PUT + 409 冲突模态；AI 生成走后端代理，视频为异步任务（`useGenerationTaskWatcher` 轮询终态后 syncVersion 重载）；媒体 URL 一律过 `lib/media-api.ts` 的 `mediaUrl()`（`/uploads/` 不在 `/api` 前缀下）。
 
-**领域词汇**（B/S 信号、观察池、生成台、能力/modelRef、参考图与媒体/素材之分）的唯一权威是 `CONTEXT.md`。
+**领域词汇**（生成台、能力/modelRef、参考图与媒体/素材之分）的唯一权威是 `CONTEXT.md`。
+
+新浪 B/S 信号选股及信号观察池已迁移至 `../guanlan`，本项目已删除对应页面、路由与入口。股票资讯日报继续保留。
 
 ## 后端连接
 
 - 所有请求发往 `import.meta.env.VITE_API_URL`（见 `.env.example`），缺省回退到硬编码生产地址 `http://43.140.214.49:3000/api`（`src/lib/api.ts:3`）。
-- 后端端点：`/api/auth/*`（注册/登录/刷新/资料）、`/api/daily-reports/*`、`/api/agents/*`（CRUD）与 `/api/conversations/*`（会话/消息/流式）、`/api/canvas-projects/*`（文档 PUT 带 baseVersion 乐观锁 + `/version` 轻量比对）、`/api/ai-generation/*`（images 同步 / videos+tasks 异步轮询）、`/api/ai-channels/*`、`/api/prompts/*`（含 sources 子资源与 refresh）、`/api/assets/*`、`/api/media/*`（上传/查询；文件本体在 `/uploads/`，不在 `/api` 前缀下）、`/api/stock-signals/*`（POST scans 需登录，结果与日期公开）、`/api/stock-watchlist/*`（全需登录；GET 列表 `{items}` 包裹、POST 批量入池返回 `{added,invalid,duplicated,overflow,items}` 四类均为代码数组、DELETE 移除、POST check 手动检查）、`/api/mcp-servers/*`、`/api/skills/*`。
+- 后端端点：`/api/auth/*`（注册/登录/刷新/资料）、`/api/daily-reports/*`、`/api/agents/*`（CRUD）与 `/api/conversations/*`（会话/消息/流式）、`/api/canvas-projects/*`（文档 PUT 带 baseVersion 乐观锁 + `/version` 轻量比对）、`/api/ai-generation/*`（images 同步 / videos+tasks 异步轮询）、`/api/ai-channels/*`、`/api/prompts/*`（含 sources 子资源与 refresh）、`/api/assets/*`、`/api/media/*`（上传/查询；文件本体在 `/uploads/`，不在 `/api` 前缀下）、`/api/mcp-servers/*`、`/api/skills/*`。
 - Agents API 分页常量（`src/lib/agents-api.ts`）：`AGENTS_LIMIT=100`（一次拉全）、`CONVERSATIONS_LIMIT=20`（滚动加载）、`MESSAGES_LIMIT=30`（向上翻页）。删除会话走 `DELETE /conversations/:id`（不在 `/agents/` 下）。后台任务走 `GET /conversations/:id/background-tasks`。
 - 连本地后端需其 CORS 放行 `http://localhost:5173`；连线上用 `pnpm dev:online`（`.env.online`：`VITE_API_URL=/api` + `VITE_PROXY_TARGET`），Vite dev server 同源代理 `/api` 与 `/uploads`，从根上绕开 CORS（2026-07 迁移验收时后端未放行本地源，代理方案即由此而来）。
 

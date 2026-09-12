@@ -158,3 +158,5 @@ CORS_ORIGINS=http://localhost:5173
 ISC
 
 本项目包含从 [infinite-canvas](https://github.com/basketikun/infinite-canvas)（AGPL-3.0）移植/改写的代码，相关文件头部有来源注释，详见根目录 [NOTICE](NOTICE)。
+
+新浪财经 B/S 信号选股及观察池已迁移到 [观澜](../guanlan)。本项目已移除 `/stock-signals` 页面及入口，股票资讯日报继续保留；后端接口与已有数据不变。

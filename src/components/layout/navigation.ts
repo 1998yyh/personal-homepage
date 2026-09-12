@@ -11,6 +11,5 @@ export const resourceNavigation = [
 ]
 export const extraNavigation = [
   { to: '/stock-news', label: '股票资讯', icon: 'trending-up' },
-  { to: '/stock-signals', label: '股票观察池', icon: 'eye' },
   { to: '/dev-tools', label: '开发工具', icon: 'wrench' },
 ]
