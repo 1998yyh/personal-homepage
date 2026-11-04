@@ -141,8 +141,8 @@ const handleSubmit = async () => {
 
   isLoading.value = true
   try {
-    const { data } = await authApi.register({ email: email.value, username: username.value, password: password.value })
-    await auth.login(data.accessToken, data.refreshToken)
+    await authApi.register({ email: email.value, username: username.value, password: password.value })
+    await auth.login(email.value, password.value)
     router.push('/')
   } catch (err) {
     const axiosErr = err as AxiosError<{ message?: string }>

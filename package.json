@@ -9,6 +9,7 @@
     "dev:online": "vite --mode online",
     "build": "vue-tsc -b && vite build",
     "lint": "eslint .",
+    "test:session-browser": "node tests/unified-session.browser.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

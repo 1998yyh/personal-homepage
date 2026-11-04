@@ -3,6 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import AppIcon from '../AppIcon.vue'
 import { primaryNavigation, resourceNavigation } from './navigation'
+import { showToast } from '../../composables/useToast'
 
 defineProps<{ collapsed?: boolean }>()
 const emit = defineEmits<{ settings: []; navigate: [] }>()
@@ -15,11 +16,10 @@ function active(to: string) {
   if (to === '/agents') return /^\/(agents|mcp-servers|skills)(\/|$)/.test(route.path)
   return route.path === to || route.path.startsWith(`${to}/`)
 }
-function logout() {
+async function logout() {
   // 退出后显式导航，确保当前受保护页面不会留在屏幕上。
-  auth.logout()
-  emit('navigate')
-  router.push('/login')
+  try { await auth.logout(); emit('navigate'); await router.push('/login') }
+  catch (error) { showToast(error instanceof Error ? error.message : '退出失败，请重试') }
 }
 </script>
 
