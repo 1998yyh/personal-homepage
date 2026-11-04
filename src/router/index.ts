@@ -6,7 +6,7 @@ const router = createRouter({
   routes: [
     { path: '/login', component: () => import('../pages/LoginPage.vue') },
     { path: '/apps', component: () => import('../pages/WorkspacePage.vue'), meta: { requiresAuth: true } },
-    { path: '/register', component: () => import('../pages/RegisterPage.vue') },
+    { path: '/register', redirect: '/login' },
     { path: '/', component: () => import('../pages/HomePage.vue') },
     { path: '/ai-news', component: () => import('../pages/DailyReports/AIReportsPage.vue') },
     { path: '/stock-news', component: () => import('../pages/DailyReports/StockReportsPage.vue') },
