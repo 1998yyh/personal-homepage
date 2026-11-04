@@ -1,4 +1,5 @@
 export const primaryNavigation = [
+  { to: '/apps', label: '我的工作台', icon: 'group' },
   { to: '/', label: '工作空间', icon: 'grid' },
   { to: '/agents', label: 'AI 对话', icon: 'message-square' },
   { to: '/studio/image', label: '创作生成', icon: 'sparkles' },
