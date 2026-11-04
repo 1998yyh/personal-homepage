@@ -57,7 +57,7 @@ jobs:
         run: |
           ssh -o BatchMode=yes ${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }} '
             for i in $(seq 1 10); do
-              code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/ || echo 000)
+              code=$(curl -s -L --max-redirs 2 --resolve 43.140.214.49:443:127.0.0.1 -o /dev/null -w "%{http_code}" http://127.0.0.1/ || echo 000)
               if [ "$code" = "200" ]; then echo "✅ 首页就绪 (HTTP $code)"; exit 0; fi
               echo "   等待中... ($i/10, HTTP $code)"; sleep 2
             done
