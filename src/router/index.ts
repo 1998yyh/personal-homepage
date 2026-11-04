@@ -5,6 +5,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', component: () => import('../pages/LoginPage.vue') },
+    { path: '/apps', component: () => import('../pages/WorkspacePage.vue'), meta: { requiresAuth: true } },
     { path: '/register', component: () => import('../pages/RegisterPage.vue') },
     { path: '/', component: () => import('../pages/HomePage.vue') },
     { path: '/ai-news', component: () => import('../pages/DailyReports/AIReportsPage.vue') },
@@ -42,7 +43,7 @@ router.beforeEach(async (to) => {
     await auth.fetchProfile()
   }
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return { path: '/login', query: { redirect: to.fullPath } }
+    return { path: '/login', query: { returnTo: to.fullPath, ...(auth.error ? { reason: 'unavailable' } : {}) } }
   }
   return true
 })
