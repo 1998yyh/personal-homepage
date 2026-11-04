@@ -49,7 +49,9 @@ jobs:
 
       - name: 同步 dist 到服务器
         run: |
+          # documents 由独立流程维护，主站静态发布不得删除其中的文件。
           rsync -rlptzD --delete --no-owner --no-group \
+            --exclude "/documents/" \
             -e "ssh -o BatchMode=yes" \
             dist/ ${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}:${{ vars.REMOTE_DIR }}/
 
